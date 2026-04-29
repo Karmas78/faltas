@@ -3,6 +3,7 @@ let ausenciasData = [];
 let funcionariosPaCount = {};
 let activeCardFilter = null;
 const csvUrlKey = 'ausencias_csv_url';
+const scriptUrlKey = 'ausencias_script_url';
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
@@ -20,9 +21,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Configuración Inicial
     const savedUrl = localStorage.getItem(csvUrlKey);
     const urlInput = document.getElementById('csvUrlInput');
+    const savedScriptUrl = localStorage.getItem(scriptUrlKey);
+    const scriptInput = document.getElementById('scriptUrlInput');
+    
     if (savedUrl) {
         urlInput.value = savedUrl;
         fetchData();
+    }
+    if (savedScriptUrl) {
+        scriptInput.value = savedScriptUrl;
     }
 
     // Event Listeners
@@ -32,7 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem(csvUrlKey, url);
             fetchData();
         } else {
-            alert('Por favor, ingresa una URL válida.');
+            alert('Por favor, ingresa una URL de CSV válida.');
+        }
+    });
+
+    document.getElementById('saveScriptBtn').addEventListener('click', () => {
+        const url = scriptInput.value.trim();
+        if (url) {
+            localStorage.setItem(scriptUrlKey, url);
+            alert('URL de Apps Script guardada correctamente.');
+        } else {
+            alert('Por favor, ingresa una URL de Script válida.');
         }
     });
 
@@ -51,6 +68,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cardManana').addEventListener('click', () => setCardFilter('manana', 'Ausentes Mañana'));
     document.getElementById('cardRetornos').addEventListener('click', () => setCardFilter('retornos', 'Retornos Inminentes'));
     document.getElementById('clearCardFilterBtn').addEventListener('click', () => setCardFilter(null, ''));
+
+    // Event Listeners Modal Nueva Ausencia
+    const modal = document.getElementById('addRecordModal');
+    document.getElementById('addRecordBtn').addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        document.getElementById('formNombre').focus();
+    });
+    
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+        modal.classList.add('hidden');
+        document.getElementById('addRecordForm').reset();
+        hideFormFeedback();
+    });
+
+    document.getElementById('submitRecordBtn').addEventListener('click', submitRecord);
 });
 
 function setCardFilter(filterValue, textLabel) {
@@ -71,6 +103,111 @@ function setCardFilter(filterValue, textLabel) {
     }
     
     renderTable();
+}
+
+// Funciones del Modal y Envío de Datos
+function hideFormFeedback() {
+    const feedback = document.getElementById('formFeedback');
+    feedback.classList.add('hidden');
+    feedback.className = 'hidden rounded-lg p-3 text-sm font-bold text-center mt-4';
+}
+
+function showFormFeedback(msg, isError = false) {
+    const feedback = document.getElementById('formFeedback');
+    feedback.innerText = msg;
+    feedback.classList.remove('hidden');
+    if (isError) {
+        feedback.className = 'rounded-lg p-3 text-sm font-bold text-center mt-4 bg-red-100 text-red-700 border border-red-200';
+    } else {
+        feedback.className = 'rounded-lg p-3 text-sm font-bold text-center mt-4 bg-blue-100 text-blue-700 border border-blue-200';
+    }
+}
+
+async function submitRecord() {
+    const scriptUrl = localStorage.getItem(scriptUrlKey);
+    if (!scriptUrl) {
+        showFormFeedback('Error: Primero debes configurar la URL del Google Apps Script en la sección "Fuente de Datos".', true);
+        return;
+    }
+
+    const form = document.getElementById('addRecordForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const btn = document.getElementById('submitRecordBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
+    btn.disabled = true;
+
+    // Convertir a formato DD/MM/YYYY para el Excel
+    const formatToLocal = (dateStr) => {
+        if(!dateStr) return '';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+    };
+
+    const formatToLocalNow = () => {
+        const formatter = new Intl.DateTimeFormat('es-CL', {
+            timeZone: 'America/Santiago',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        const parts = formatter.formatToParts(new Date());
+        const dateObj = {};
+        parts.forEach(p => dateObj[p.type] = p.value);
+        return `${dateObj.day}/${dateObj.month}/${dateObj.year}`;
+    };
+
+    const payload = {
+        fechaRegistro: formatToLocalNow(),
+        nombre: document.getElementById('formNombre').value,
+        tipo: document.getElementById('formTipo').value,
+        dias: document.getElementById('formDias').value,
+        inicio: formatToLocal(document.getElementById('formInicio').value),
+        termino: formatToLocal(document.getElementById('formTermino').value),
+        obs: document.getElementById('formObs').value
+    };
+
+    const formData = new URLSearchParams();
+    for (const key in payload) {
+        formData.append(key, payload[key]);
+    }
+
+    try {
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i> ¡Guardado!';
+            btn.classList.replace('bg-emerald-600', 'bg-blue-600');
+            
+            setTimeout(() => {
+                document.getElementById('addRecordModal').classList.add('hidden');
+                form.reset();
+                hideFormFeedback();
+                btn.innerHTML = originalText;
+                btn.classList.replace('bg-blue-600', 'bg-emerald-600');
+                btn.disabled = false;
+                
+                // Recargar datos automáticamente
+                fetchData();
+            }, 1500);
+        } else {
+            throw new Error(result.message || 'Error desconocido');
+        }
+    } catch (error) {
+        console.error('Error al guardar:', error);
+        showFormFeedback('Error de red o permisos al guardar. Asegúrate de haber publicado correctamente el Apps Script.', true);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 
 // Obtener fecha actual en zona horaria de Chile/Santiago (formato YYYY-MM-DD)
