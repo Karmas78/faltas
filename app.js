@@ -92,7 +92,7 @@ function fetchData() {
 
     Papa.parse(url, {
         download: true,
-        header: true,
+        header: false,
         skipEmptyLines: true,
         complete: function(results) {
             processData(results.data);
@@ -111,20 +111,42 @@ function processData(data) {
     funcionariosPaCount = {};
     const tiposAusencia = new Set();
 
-    data.forEach(row => {
-        // Normalizar nombres de columnas eliminando espacios extra
-        const cleanRow = {};
-        for(let key in row) {
-            if(key) {
-                cleanRow[key.trim()] = typeof row[key] === 'string' ? row[key].trim() : row[key];
-            }
+    if (!data || data.length === 0) {
+        showError("El archivo CSV está vacío.");
+        return;
+    }
+
+    // Buscar fila de encabezados dinámicamente
+    let headerRowIndex = -1;
+    for (let i = 0; i < data.length; i++) {
+        if (data[i].some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'NOMBRE FUNCIONARIO')) {
+            headerRowIndex = i;
+            break;
         }
+    }
+
+    if (headerRowIndex === -1) {
+        showError("No se encontraron las columnas esperadas (NOMBRE FUNCIONARIO) en el CSV.");
+        return;
+    }
+
+    const headers = data[headerRowIndex].map(h => typeof h === 'string' ? h.trim().toUpperCase() : '');
+
+    for (let i = headerRowIndex + 1; i < data.length; i++) {
+        const rowArray = data[i];
+        const cleanRow = {};
+        
+        headers.forEach((header, index) => {
+            if (header) {
+                cleanRow[header] = rowArray[index] ? String(rowArray[index]).trim() : '';
+            }
+        });
 
         const funcionario = cleanRow['NOMBRE FUNCIONARIO'] || cleanRow['NOMBRE'] || 'Desconocido';
         const tipoAus = cleanRow['TIPO AUS'] || cleanRow['TIPO'] || '';
         const inicioRaw = cleanRow['FECHA INICIO'] || '';
         const terminoRaw = cleanRow['FECHA TERMINO'] || cleanRow['FECHA TÉRMINO'] || '';
-        const numDiasRaw = cleanRow['N° HRS/DÍAS'] || cleanRow['DIAS'] || '0';
+        const numDiasRaw = cleanRow['N° HRS/DÍAS'] || cleanRow['N° HRS/DIAS'] || cleanRow['DIAS'] || '0';
         
         let numDias = parseFloat(numDiasRaw.replace(',', '.'));
         if (isNaN(numDias)) numDias = 0;
@@ -155,7 +177,7 @@ function processData(data) {
                 errorFecha: errorFecha
             });
         }
-    });
+    }
 
     updateFilterOptions(tiposAusencia);
     calculateDashboardMetrics();
