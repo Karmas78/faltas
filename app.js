@@ -1,6 +1,7 @@
 // Constantes y Estado Global
 let ausenciasData = [];
 let funcionariosPaCount = {};
+let activeCardFilter = null;
 const csvUrlKey = 'ausencias_csv_url';
 
 // Inicialización
@@ -44,7 +45,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('searchInput').addEventListener('input', renderTable);
     document.getElementById('filterType').addEventListener('change', renderTable);
+
+    // Event Listeners para Cards
+    document.getElementById('cardHoy').addEventListener('click', () => setCardFilter('hoy', 'Ausentes Hoy'));
+    document.getElementById('cardManana').addEventListener('click', () => setCardFilter('manana', 'Ausentes Mañana'));
+    document.getElementById('cardRetornos').addEventListener('click', () => setCardFilter('retornos', 'Retornos Inminentes'));
+    document.getElementById('clearCardFilterBtn').addEventListener('click', () => setCardFilter(null, ''));
 });
+
+function setCardFilter(filterValue, textLabel) {
+    activeCardFilter = filterValue;
+    const alertBox = document.getElementById('activeFilterAlert');
+    const textSpan = document.getElementById('activeFilterText');
+    
+    if (filterValue) {
+        textSpan.innerText = `Mostrando filtro: ${textLabel}`;
+        alertBox.classList.remove('hidden');
+    } else {
+        alertBox.classList.add('hidden');
+    }
+    
+    // Smooth scroll to the table slightly to show the user what happened
+    if (filterValue) {
+        document.getElementById('activeFilterAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    renderTable();
+}
 
 // Obtener fecha actual en zona horaria de Chile/Santiago (formato YYYY-MM-DD)
 function getChileDateStr(offsetDays = 0) {
@@ -247,7 +274,22 @@ function renderTable() {
     let filteredData = ausenciasData.filter(item => {
         const matchSearch = item.funcionario.toLowerCase().includes(searchTerm);
         const matchFilter = filterType === '' || item.tipo.toUpperCase() === filterType;
-        return matchSearch && matchFilter;
+        
+        let matchCard = true;
+        if (activeCardFilter) {
+            matchCard = false;
+            if (!item.errorFecha && item.inicio && item.termino) {
+                if (activeCardFilter === 'hoy' && hoyStr >= item.inicio && hoyStr <= item.termino) {
+                    matchCard = true;
+                } else if (activeCardFilter === 'manana' && mananaStr >= item.inicio && mananaStr <= item.termino) {
+                    matchCard = true;
+                } else if (activeCardFilter === 'retornos' && item.termino === hoyStr) {
+                    matchCard = true;
+                }
+            }
+        }
+
+        return matchSearch && matchFilter && matchCard;
     });
 
     if (filteredData.length === 0 && ausenciasData.length > 0) {
