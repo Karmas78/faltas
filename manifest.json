@@ -1,0 +1,17 @@
+{
+  "name": "Gestión de Ausencias Laborales",
+  "short_name": "Ausencias",
+  "description": "PWA para gestión de ausencias laborales, permisos y licencias",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3652/3652191.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
