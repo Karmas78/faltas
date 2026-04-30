@@ -98,7 +98,7 @@ function resetModalState() {
     btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
 }
 
-function editRecord(nombre, tipo, dias, inicio, termino, obs) {
+function editRecord(id, nombre, tipo, dias, inicio, termino, obs) {
     const formatDateForInput = (dateStr) => {
         if (!dateStr) return '';
         let parts = dateStr.trim().split(/[-/]/);
@@ -116,7 +116,7 @@ function editRecord(nombre, tipo, dias, inicio, termino, obs) {
     document.getElementById('formTermino').value = formatDateForInput(termino);
     document.getElementById('formObs').value = obs;
 
-    currentEditOriginal = { nombre, inicio, termino };
+    currentEditOriginal = { id, nombre, inicio, termino };
 
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit mr-2"></i> Editar Ausencia';
     const btn = document.getElementById('submitRecordBtn');
@@ -205,6 +205,7 @@ async function submitRecord() {
 
     const payload = {
         action: currentEditOriginal ? 'edit' : 'add',
+        id: currentEditOriginal ? currentEditOriginal.id : '',
         fechaRegistro: formatToLocalNow(),
         nombre: document.getElementById('formNombre').value,
         tipo: document.getElementById('formTipo').value,
@@ -257,7 +258,7 @@ async function submitRecord() {
     }
 }
 
-async function deleteRecord(nombre, inicio, termino) {
+async function deleteRecord(id, nombre, inicio, termino) {
     if (!confirm(`¿Estás seguro de borrar el registro de:\n${nombre}\nDel ${inicio} al ${termino}?\n\nEsto eliminará la fila de tu Excel.`)) {
         return;
     }
@@ -270,6 +271,7 @@ async function deleteRecord(nombre, inicio, termino) {
 
     const payload = {
         action: 'delete',
+        id: id,
         nombre: nombre,
         inicio: inicio,
         termino: termino
@@ -292,7 +294,7 @@ async function deleteRecord(nombre, inicio, termino) {
         if (result.status === 'success') {
             fetchData();
         } else {
-            alert('No se pudo borrar: ' + (result.message || 'Fila no encontrada'));
+            alert('No se pudo borrar: ' + (result.message || 'Registro no encontrado'));
             hideLoading();
         }
     } catch (error) {
@@ -392,6 +394,7 @@ function processData(data) {
     // Mapear índices de columnas a sus nombres lógicos
     const colMap = {};
     headers.forEach((h, idx) => {
+        if (h.includes('ID')) colMap.id = idx;
         if (h.includes('NOMBRE FUNCIONARIO') || h === 'NOMBRE') colMap.funcionario = idx;
         if (h.includes('TIPO AUS') || h === 'TIPO') colMap.tipo = idx;
         if (h.includes('FECHA INICIO') || h === 'INICIO') colMap.inicio = idx;
@@ -404,6 +407,7 @@ function processData(data) {
         const row = data[i];
         if (!row || row.length < 2) continue;
 
+        const id = colMap.id !== undefined ? (row[colMap.id] || '').toString().trim() : '';
         const funcionario = (row[colMap.funcionario] || 'Desconocido').toString().trim();
         const tipoAus = (row[colMap.tipo] || '').toString().trim();
         const inicioRaw = (row[colMap.inicio] || '').toString().trim();
@@ -431,6 +435,7 @@ function processData(data) {
         const errorFecha = (fInicio && fTermino && fTermino < fInicio);
 
         ausenciasData.push({
+            id,
             funcionario,
             tipo: tipoAus,
             dias: numDias,
@@ -626,10 +631,10 @@ function renderTable() {
                 ${statusHtml}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button onclick="editRecord('${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${escapeJS(item.diasStr)}', '${escapeJS(item.inicioStr)}', '${escapeJS(item.terminoStr)}', '${escapeJS(item.obs)}')" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100 shadow-sm mr-2" title="Editar registro">
+                <button onclick="editRecord('${escapeJS(item.id)}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${escapeJS(item.diasStr)}', '${escapeJS(item.inicioStr)}', '${escapeJS(item.terminoStr)}', '${escapeJS(item.obs)}')" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100 shadow-sm mr-2" title="Editar registro">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="deleteRecord('${escapeJS(item.funcionario)}', '${escapeJS(item.inicioStr)}', '${escapeJS(item.terminoStr)}')" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg border border-red-100 shadow-sm" title="Borrar registro">
+                <button onclick="deleteRecord('${escapeJS(item.id)}', '${escapeJS(item.funcionario)}', '${escapeJS(item.inicioStr)}', '${escapeJS(item.terminoStr)}')" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg border border-red-100 shadow-sm" title="Borrar registro">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </td>
