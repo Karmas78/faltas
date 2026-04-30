@@ -47,7 +47,8 @@ function doPost(e) {
   }
   
   if (action === "delete" || action === "edit") {
-    var data = sheet.getDataRange().getValues();
+    // IMPORTANTE: getDisplayValues() asegura que comparemos TEXTO
+    var data = sheet.getDataRange().getDisplayValues();
     var headers = data[0];
     var nombreCol = -1, inicioCol = -1, terminoCol = -1;
     

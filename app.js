@@ -247,11 +247,11 @@ async function submitRecord() {
                 fetchData();
             }, 1500);
         } else {
-            throw new Error(result.message || 'Error desconocido');
+            throw new Error(result.message || 'Error del servidor');
         }
     } catch (error) {
         console.error('Error al guardar:', error);
-        showFormFeedback('Error de red o permisos al guardar. Asegúrate de haber publicado correctamente el Apps Script.', true);
+        showFormFeedback('Error: ' + error.message, true);
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
