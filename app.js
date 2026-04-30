@@ -103,8 +103,8 @@ function editRecord(nombre, tipo, dias, inicio, termino, obs) {
         if (!dateStr) return '';
         let parts = dateStr.trim().split(/[-/]/);
         if (parts.length === 3) {
-            if (parts[0].length === 4) return \`\${parts[0]}-\${parts[1].padStart(2,'0')}-\${parts[2].padStart(2,'0')}\`;
-            return \`\${parts[2]}-\${parts[1].padStart(2,'0')}-\${parts[0].padStart(2,'0')}\`;
+            if (parts[0].length === 4) return `${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`;
+            return `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
         }
         return '';
     };
@@ -388,23 +388,31 @@ function processData(data) {
     }
 
     const headers = data[headerRowIndex].map(h => typeof h === 'string' ? h.trim().toUpperCase() : '');
+    
+    // Mapear índices de columnas a sus nombres lógicos
+    const colMap = {};
+    headers.forEach((h, idx) => {
+        if (h.includes('NOMBRE FUNCIONARIO') || h === 'NOMBRE') colMap.funcionario = idx;
+        if (h.includes('TIPO AUS') || h === 'TIPO') colMap.tipo = idx;
+        if (h.includes('FECHA INICIO') || h === 'INICIO') colMap.inicio = idx;
+        if (h.includes('FECHA TERMINO') || h.includes('FECHA TÉRMINO') || h === 'TERMINO') colMap.termino = idx;
+        if (h.includes('N° HRS/DÍAS') || h.includes('N° HRS/DIAS') || h === 'DIAS') colMap.dias = idx;
+        if (h.includes('OBSERVACIONES') || h === 'OBS') colMap.obs = idx;
+    });
 
     for (let i = headerRowIndex + 1; i < data.length; i++) {
-        const rowArray = data[i];
-        const cleanRow = {};
-        
-        headers.forEach((header, index) => {
-            if (header) {
-                cleanRow[header] = rowArray[index] ? String(rowArray[index]).trim() : '';
-            }
-        });
+        const row = data[i];
+        if (!row || row.length < 2) continue;
 
-        const funcionario = cleanRow['NOMBRE FUNCIONARIO'] || cleanRow['NOMBRE'] || 'Desconocido';
-        const tipoAus = cleanRow['TIPO AUS'] || cleanRow['TIPO'] || '';
-        const inicioRaw = cleanRow['FECHA INICIO'] || '';
-        const terminoRaw = cleanRow['FECHA TERMINO'] || cleanRow['FECHA TÉRMINO'] || '';
-        const numDiasRaw = cleanRow['N° HRS/DÍAS'] || cleanRow['N° HRS/DIAS'] || cleanRow['DIAS'] || '0';
+        const funcionario = (row[colMap.funcionario] || 'Desconocido').toString().trim();
+        const tipoAus = (row[colMap.tipo] || '').toString().trim();
+        const inicioRaw = (row[colMap.inicio] || '').toString().trim();
+        const terminoRaw = (row[colMap.termino] || '').toString().trim();
+        const numDiasRaw = (row[colMap.dias] || '0').toString().trim();
+        const obs = (row[colMap.obs] || '').toString().trim();
         
+        if (funcionario === 'Desconocido' && tipoAus === '') continue;
+
         let numDias = parseFloat(numDiasRaw.replace(',', '.'));
         if (isNaN(numDias)) numDias = 0;
 
@@ -419,25 +427,21 @@ function processData(data) {
         if (tipoAus) tiposAusencia.add(tipoAus.toUpperCase());
         if (funcionario !== 'Desconocido') funcionariosSet.add(funcionario);
 
-        const obs = cleanRow['OBS'] || cleanRow['OBSERVACIONES'] || '';
-
         // Validar si la fecha de término es anterior a la de inicio
         const errorFecha = (fInicio && fTermino && fTermino < fInicio);
 
-        if(funcionario !== 'Desconocido' || tipoAus !== '') {
-            ausenciasData.push({
-                funcionario,
-                tipo: tipoAus,
-                dias: numDias,
-                diasStr: numDiasRaw,
-                inicio: fInicio,
-                inicioStr: inicioRaw,
-                termino: fTermino,
-                terminoStr: terminoRaw,
-                obs: obs,
-                errorFecha: errorFecha
-            });
-        }
+        ausenciasData.push({
+            funcionario,
+            tipo: tipoAus,
+            dias: numDias,
+            diasStr: numDiasRaw,
+            inicio: fInicio,
+            inicioStr: inicioRaw,
+            termino: fTermino,
+            terminoStr: terminoRaw,
+            obs: obs,
+            errorFecha: errorFecha
+        });
     }
 
     updateFilterOptions(tiposAusencia);
@@ -447,22 +451,16 @@ function processData(data) {
 }
 
 function populateFuncionariosList(funcionarios) {
-    const select = document.getElementById('formNombre');
-    if (!select) return;
+    const list = document.getElementById('funcionariosList');
+    if (!list) return;
     
-    const currentValue = select.value;
-    select.innerHTML = '<option value="" disabled selected>Seleccione un funcionario</option>';
+    list.innerHTML = '';
     
     Array.from(funcionarios).sort().forEach(func => {
         const option = document.createElement('option');
         option.value = func;
-        option.textContent = func;
-        select.appendChild(option);
+        list.appendChild(option);
     });
-    
-    if (currentValue && Array.from(funcionarios).includes(currentValue)) {
-        select.value = currentValue;
-    }
 }
 
 function updateFilterOptions(tipos) {
@@ -628,10 +626,10 @@ function renderTable() {
                 ${statusHtml}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button onclick="editRecord('${item.funcionario}', '${item.tipo}', '${item.diasStr}', '${item.inicioStr}', '${item.terminoStr}', '${(item.obs || '').replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100 shadow-sm mr-2" title="Editar registro">
+                <button onclick="editRecord('${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${escapeJS(item.diasStr)}', '${escapeJS(item.inicioStr)}', '${escapeJS(item.terminoStr)}', '${escapeJS(item.obs)}')" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100 shadow-sm mr-2" title="Editar registro">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button onclick="deleteRecord('${item.funcionario}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg border border-red-100 shadow-sm" title="Borrar registro">
+                <button onclick="deleteRecord('${escapeJS(item.funcionario)}', '${escapeJS(item.inicioStr)}', '${escapeJS(item.terminoStr)}')" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg border border-red-100 shadow-sm" title="Borrar registro">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </td>
@@ -677,4 +675,14 @@ function animateValue(id, end) {
         }
     };
     window.requestAnimationFrame(step);
+}
+
+function escapeJS(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/\\/g, "\\\\")
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r");
 }
