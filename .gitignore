@@ -1,0 +1,7 @@
+# Excluir carpeta de archivos que no deben subirse
+no\ subir/
+no_subir/
+
+# Excluir archivos Excel (opcional pero recomendado si contienen datos sensibles)
+*.xlsx
+*.xls

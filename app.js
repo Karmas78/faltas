@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event Listeners Modal Nueva Ausencia
     const modal = document.getElementById('addRecordModal');
     document.getElementById('addRecordBtn').addEventListener('click', () => {
+        resetModalState();
         modal.classList.remove('hidden');
         document.getElementById('formNombre').focus();
     });
@@ -84,6 +85,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('submitRecordBtn').addEventListener('click', submitRecord);
 });
+
+let currentEditOriginal = null;
+
+function resetModalState() {
+    currentEditOriginal = null;
+    document.getElementById('addRecordForm').reset();
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle mr-2"></i> Registrar Nueva Ausencia';
+    const btn = document.getElementById('submitRecordBtn');
+    btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Guardar en Excel';
+    btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+    btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+}
+
+function editRecord(nombre, tipo, dias, inicio, termino, obs) {
+    const formatDateForInput = (dateStr) => {
+        if (!dateStr) return '';
+        let parts = dateStr.trim().split(/[-/]/);
+        if (parts.length === 3) {
+            if (parts[0].length === 4) return \`\${parts[0]}-\${parts[1].padStart(2,'0')}-\${parts[2].padStart(2,'0')}\`;
+            return \`\${parts[2]}-\${parts[1].padStart(2,'0')}-\${parts[0].padStart(2,'0')}\`;
+        }
+        return '';
+    };
+
+    document.getElementById('formNombre').value = nombre;
+    document.getElementById('formTipo').value = tipo;
+    document.getElementById('formDias').value = dias.replace(',', '.');
+    document.getElementById('formInicio').value = formatDateForInput(inicio);
+    document.getElementById('formTermino').value = formatDateForInput(termino);
+    document.getElementById('formObs').value = obs;
+
+    currentEditOriginal = { nombre, inicio, termino };
+
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit mr-2"></i> Editar Ausencia';
+    const btn = document.getElementById('submitRecordBtn');
+    btn.innerHTML = '<i class="fas fa-save mr-2"></i> Actualizar en Excel';
+    btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+    btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+
+    document.getElementById('addRecordModal').classList.remove('hidden');
+}
 
 function setCardFilter(filterValue, textLabel) {
     activeCardFilter = filterValue;
@@ -162,6 +204,7 @@ async function submitRecord() {
     };
 
     const payload = {
+        action: currentEditOriginal ? 'edit' : 'add',
         fechaRegistro: formatToLocalNow(),
         nombre: document.getElementById('formNombre').value,
         tipo: document.getElementById('formTipo').value,
@@ -170,6 +213,12 @@ async function submitRecord() {
         termino: formatToLocal(document.getElementById('formTermino').value),
         obs: document.getElementById('formObs').value
     };
+
+    if (currentEditOriginal) {
+        payload.origNombre = currentEditOriginal.nombre;
+        payload.origInicio = currentEditOriginal.inicio;
+        payload.origTermino = currentEditOriginal.termino;
+    }
 
     const formData = new URLSearchParams();
     for (const key in payload) {
@@ -190,10 +239,8 @@ async function submitRecord() {
             
             setTimeout(() => {
                 document.getElementById('addRecordModal').classList.add('hidden');
-                form.reset();
+                resetModalState();
                 hideFormFeedback();
-                btn.innerHTML = originalText;
-                btn.classList.replace('bg-blue-600', 'bg-emerald-600');
                 btn.disabled = false;
                 
                 // Recargar datos automáticamente
@@ -207,6 +254,51 @@ async function submitRecord() {
         showFormFeedback('Error de red o permisos al guardar. Asegúrate de haber publicado correctamente el Apps Script.', true);
         btn.innerHTML = originalText;
         btn.disabled = false;
+    }
+}
+
+async function deleteRecord(nombre, inicio, termino) {
+    if (!confirm(`¿Estás seguro de borrar el registro de:\n${nombre}\nDel ${inicio} al ${termino}?\n\nEsto eliminará la fila de tu Excel.`)) {
+        return;
+    }
+
+    const scriptUrl = localStorage.getItem(scriptUrlKey);
+    if (!scriptUrl) {
+        alert('Debes configurar la URL de Apps Script en Fuente de Datos primero.');
+        return;
+    }
+
+    const payload = {
+        action: 'delete',
+        nombre: nombre,
+        inicio: inicio,
+        termino: termino
+    };
+
+    const formData = new URLSearchParams();
+    for (const key in payload) {
+        formData.append(key, payload[key]);
+    }
+
+    showLoading();
+
+    try {
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        if (result.status === 'success') {
+            fetchData();
+        } else {
+            alert('No se pudo borrar: ' + (result.message || 'Fila no encontrada'));
+            hideLoading();
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Error al borrar. Asegúrate de haber actualizado el Apps Script.');
+        hideLoading();
     }
 }
 
@@ -274,6 +366,7 @@ function processData(data) {
     ausenciasData = [];
     funcionariosPaCount = {};
     const tiposAusencia = new Set();
+    const funcionariosSet = new Set();
 
     if (!data || data.length === 0) {
         showError("El archivo CSV está vacío.");
@@ -324,6 +417,9 @@ function processData(data) {
         }
 
         if (tipoAus) tiposAusencia.add(tipoAus.toUpperCase());
+        if (funcionario !== 'Desconocido') funcionariosSet.add(funcionario);
+
+        const obs = cleanRow['OBS'] || cleanRow['OBSERVACIONES'] || '';
 
         // Validar si la fecha de término es anterior a la de inicio
         const errorFecha = (fInicio && fTermino && fTermino < fInicio);
@@ -338,14 +434,35 @@ function processData(data) {
                 inicioStr: inicioRaw,
                 termino: fTermino,
                 terminoStr: terminoRaw,
+                obs: obs,
                 errorFecha: errorFecha
             });
         }
     }
 
     updateFilterOptions(tiposAusencia);
+    populateFuncionariosList(funcionariosSet);
     calculateDashboardMetrics();
     renderTable();
+}
+
+function populateFuncionariosList(funcionarios) {
+    const select = document.getElementById('formNombre');
+    if (!select) return;
+    
+    const currentValue = select.value;
+    select.innerHTML = '<option value="" disabled selected>Seleccione un funcionario</option>';
+    
+    Array.from(funcionarios).sort().forEach(func => {
+        const option = document.createElement('option');
+        option.value = func;
+        option.textContent = func;
+        select.appendChild(option);
+    });
+    
+    if (currentValue && Array.from(funcionarios).includes(currentValue)) {
+        select.value = currentValue;
+    }
 }
 
 function updateFilterOptions(tipos) {
@@ -509,6 +626,14 @@ function renderTable() {
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
                 ${statusHtml}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                <button onclick="editRecord('${item.funcionario}', '${item.tipo}', '${item.diasStr}', '${item.inicioStr}', '${item.terminoStr}', '${(item.obs || '').replace(/'/g, "\\'")}')" class="text-blue-500 hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg border border-blue-100 shadow-sm mr-2" title="Editar registro">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="deleteRecord('${item.funcionario}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 transition-colors bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg border border-red-100 shadow-sm" title="Borrar registro">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </td>
         `;
         tbody.appendChild(tr);
