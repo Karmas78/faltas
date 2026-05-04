@@ -9,10 +9,18 @@
  */
 
 export const firebaseConfig = {
-  apiKey: "TU_API_KEY",
-  authDomain: "TU_PROYECTO.firebaseapp.com",
-  projectId: "TU_PROYECTO",
-  storageBucket: "TU_PROYECTO.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+
+  apiKey: "AIzaSyBiC7G4oWOVf2wKzVC2fCZdAqrkqdkhbzg",
+
+  authDomain: "faltas-pwa-gerv.firebaseapp.com",
+
+  projectId: "faltas-pwa-gerv",
+
+  storageBucket: "faltas-pwa-gerv.firebasestorage.app",
+
+  messagingSenderId: "934824700975",
+
+  appId: "1:934824700975:web:6bfa495fcbe3351a3eeada"
+
 };
+
