@@ -25,6 +25,7 @@ try {
 }
 
 // Estado Global
+const ACCESS_PASSWORD = "Escuela711";
 let ausenciasData = [];
 let funcionariosPaCount = {};
 let activeCardFilter = null;
@@ -56,6 +57,46 @@ function updateFirebaseStatus(success, errorMsg = "") {
 
 // Inicialización de la App
 document.addEventListener('DOMContentLoaded', () => {
+    // Sistema de Acceso (Login)
+    const overlay = document.getElementById('loginOverlay');
+    const loginForm = document.getElementById('loginForm');
+    const passwordInput = document.getElementById('loginPassword');
+    const errorMsg = document.getElementById('loginError');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const checkLogin = () => {
+        if (localStorage.getItem('app_authenticated') === 'true') {
+            overlay.classList.add('hidden');
+            if (db && firebaseConfig.apiKey !== "TU_API_KEY") {
+                fetchData();
+            }
+        } else {
+            overlay.classList.remove('hidden');
+        }
+    };
+
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (passwordInput.value === ACCESS_PASSWORD) {
+            localStorage.setItem('app_authenticated', 'true');
+            errorMsg.classList.add('hidden');
+            checkLogin();
+        } else {
+            errorMsg.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    });
+
+    logoutBtn.addEventListener('click', () => {
+        if (confirm('¿Cerrar sesión?')) {
+            localStorage.removeItem('app_authenticated');
+            window.location.reload();
+        }
+    });
+
+    checkLogin();
+
     // Registro del Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -109,11 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('closeMigrationBtn').addEventListener('click', () => migModal.classList.add('hidden'));
     document.getElementById('startMigrationBtn').addEventListener('click', startMigration);
-
-    // Iniciar escucha de datos en tiempo real
-    if (db && firebaseConfig.apiKey !== "TU_API_KEY") {
-        fetchData();
-    }
 });
 
 let currentEditId = null;
