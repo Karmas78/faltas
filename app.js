@@ -8,6 +8,7 @@ import {
     updateDoc, 
     deleteDoc, 
     getDocs,
+    enableIndexedDbPersistence,
     query, 
     orderBy,
     serverTimestamp 
@@ -26,6 +27,16 @@ try {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
+    
+    // Habilitar Persistencia Offline de Firestore
+    enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.log("Persistencia falló: múltiples pestañas abiertas");
+        } else if (err.code == 'unimplemented') {
+            console.log("Persistencia no soportada por el navegador");
+        }
+    });
+
     updateFirebaseStatus(true);
 } catch (error) {
     console.error("Error al inicializar Firebase:", error);
@@ -73,6 +84,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordInput = document.getElementById('loginPassword');
     const errorMsg = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
+    const darkModeBtn = document.getElementById('darkModeBtn');
+
+    // Modo Oscuro
+    const toggleDarkMode = () => {
+        document.documentElement.classList.toggle('dark');
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('dark_mode', isDark);
+        darkModeBtn.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        updateCharts(); // Refrescar colores de gráficos
+    };
+
+    if (localStorage.getItem('dark_mode') === 'true') {
+        document.documentElement.classList.add('dark');
+        darkModeBtn.innerHTML = '<i class="fas fa-sun"></i>';
+    }
+
+    darkModeBtn.addEventListener('click', toggleDarkMode);
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -491,6 +519,16 @@ function fetchData() {
             const fTermino = parseDateString(item.termino);
             const errorFecha = (fInicio && fTermino && fTermino < fInicio);
 
+            // Formatear Fecha Registro (createdAt)
+            let fRegistroStr = '-';
+            if (item.createdAt) {
+                const date = item.createdAt.toDate();
+                fRegistroStr = date.toLocaleDateString('es-CL');
+            } else if (item.updatedAt) {
+                const date = item.updatedAt.toDate();
+                fRegistroStr = date.toLocaleDateString('es-CL');
+            }
+
             // Acumulación P.A.
             if (item.tipo && item.tipo.toUpperCase() === 'P.A.') {
                 funcionariosPaCount[item.nombre] = (funcionariosPaCount[item.nombre] || 0) + (item.dias || 0);
@@ -503,6 +541,7 @@ function fetchData() {
                 id: id,
                 funcionario: item.nombre,
                 fechaAviso: item.fechaAviso,
+                fechaRegistro: fRegistroStr,
                 tipo: item.tipo,
                 dias: item.dias,
                 diasStr: item.dias.toString(),
@@ -769,6 +808,9 @@ function renderTable() {
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
                 ${item.fechaAviso || '-'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
+                ${item.fechaRegistro}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">${statusHtml}</td>
             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
