@@ -169,7 +169,7 @@ function updateDashboard(tipos, funcionarios, paTotal) {
     document.getElementById('totalPA').innerText = paTotal.toFixed(1);
     document.getElementById('totalFuncionarios').innerText = funcionarios.size;
 
-    const filterSelect = document.getElementById('filterTipo');
+    const filterSelect = document.getElementById('filterType');
     const current = filterSelect.value;
     filterSelect.innerHTML = '<option value="">Todos los tipos</option>';
     Array.from(tipos).sort().forEach(t => filterSelect.innerHTML += `<option value="${t}">${t}</option>`);
@@ -181,8 +181,10 @@ function updateDashboard(tipos, funcionarios, paTotal) {
 }
 
 function renderTable(data) {
-    const filter = document.getElementById('filterTipo').value;
-    const tbody = document.getElementById('tableBody');
+    const filterSelect = document.getElementById('filterType');
+    const filter = filterSelect ? filterSelect.value : "";
+    const tbody = document.getElementById('dataTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
 
     const filtered = filter ? data.filter(d => d.tipo === filter) : data;
@@ -270,8 +272,9 @@ function setupEventListeners() {
         } catch (err) { alert("Error: " + err.message); }
     });
 
-    document.getElementById('filterTipo').addEventListener('change', () => renderTable(ausenciasData));
+    document.getElementById('filterType').addEventListener('change', () => renderTable(ausenciasData));
     document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+    document.getElementById('refreshBtn').addEventListener('click', () => window.location.reload());
     
     // Migración
     document.getElementById('openMigrationBtn').addEventListener('click', () => document.getElementById('migrationModal').classList.remove('hidden'));
@@ -280,7 +283,9 @@ function setupEventListeners() {
     document.getElementById('deleteAllBtn').addEventListener('click', async () => {
         if (confirm("¿Borrar TODO?") && prompt("Escribe BORRAR") === "BORRAR") {
             const snap = await getDocs(collection(db, "ausencias"));
-            snap.forEach(async d => await deleteDoc(doc(db, "ausencias", d.id)));
+            for (const d of snap.docs) {
+                await deleteDoc(doc(db, "ausencias", d.id));
+            }
         }
     });
 }
@@ -311,11 +316,18 @@ function exportToCSV() {
 }
 
 async function handleMigration() {
-    const url = document.getElementById('migrationUrl').value;
+    const urlInput = document.getElementById('migrationCsvUrl');
+    const url = urlInput ? urlInput.value : "";
     if (!url) return;
+    
+    const status = document.getElementById('migrationStatus');
+    status.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
+    status.classList.remove('hidden');
+
     Papa.parse(url, {
         download: true, header: true,
         complete: async (res) => {
+            let count = 0;
             for (const r of res.data) {
                 if (r.NOMBRE || r['NOMBRE FUNCIONARIO']) {
                     await addDoc(collection(db, "ausencias"), {
@@ -326,9 +338,10 @@ async function handleMigration() {
                         termino: r.TERMINO || r['FECHA TERMINO'],
                         createdAt: serverTimestamp()
                     });
+                    count++;
                 }
             }
-            alert("Migración terminada");
+            status.innerHTML = `<i class="fas fa-check-circle mr-2"></i> Migrados ${count} registros.`;
         }
     });
 }
