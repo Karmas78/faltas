@@ -100,6 +100,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('submitRecordBtn').addEventListener('click', submitRecord);
 
+    // Migration Tool Listeners
+    const migModal = document.getElementById('migrationModal');
+    document.getElementById('openMigrationBtn').addEventListener('click', () => {
+        migModal.classList.remove('hidden');
+        const savedUrl = localStorage.getItem('ausencias_csv_url');
+        if (savedUrl) document.getElementById('migrationCsvUrl').value = savedUrl;
+    });
+    document.getElementById('closeMigrationBtn').addEventListener('click', () => migModal.classList.add('hidden'));
+    document.getElementById('startMigrationBtn').addEventListener('click', startMigration);
+
     // Iniciar escucha de datos en tiempo real
     if (db && firebaseConfig.apiKey !== "TU_API_KEY") {
         fetchData();
@@ -192,6 +202,114 @@ function showFormFeedback(msg, isError = false) {
     feedback.className = isError 
         ? 'rounded-lg p-3 text-sm font-bold text-center mt-4 bg-red-100 text-red-700 border border-red-200'
         : 'rounded-lg p-3 text-sm font-bold text-center mt-4 bg-blue-100 text-blue-700 border border-blue-200';
+}
+
+async function startMigration() {
+    const url = document.getElementById('migrationCsvUrl').value.trim();
+    if (!url) {
+        alert("Por favor, ingresa una URL de CSV.");
+        return;
+    }
+
+    const statusDiv = document.getElementById('migrationStatus');
+    const startBtn = document.getElementById('startMigrationBtn');
+    
+    statusDiv.innerText = "Cargando datos...";
+    statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-blue-100 text-blue-700";
+    statusDiv.classList.remove('hidden');
+    startBtn.disabled = true;
+
+    Papa.parse(url, {
+        download: true,
+        header: false,
+        skipEmptyLines: true,
+        complete: async function(results) {
+            try {
+                await processAndUploadMigration(results.data);
+                statusDiv.innerText = "¡Migración completada con éxito!";
+                statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
+                setTimeout(() => {
+                    document.getElementById('migrationModal').classList.add('hidden');
+                    startBtn.disabled = false;
+                }, 2000);
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "Error en la migración: " + err.message;
+                statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-red-100 text-red-700";
+                startBtn.disabled = false;
+            }
+        },
+        error: function(err) {
+            statusDiv.innerText = "Error al descargar el CSV.";
+            statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-red-100 text-red-700";
+            startBtn.disabled = false;
+        }
+    });
+}
+
+async function processAndUploadMigration(data) {
+    let headerRowIndex = -1;
+    for (let i = 0; i < data.length; i++) {
+        if (data[i].some(cell => typeof cell === 'string' && cell.trim().toUpperCase() === 'NOMBRE FUNCIONARIO')) {
+            headerRowIndex = i;
+            break;
+        }
+    }
+
+    if (headerRowIndex === -1) throw new Error("Formato de CSV no reconocido (Falta 'NOMBRE FUNCIONARIO')");
+
+    const headers = data[headerRowIndex].map(h => typeof h === 'string' ? h.trim().toUpperCase() : '');
+    const colMap = {};
+    headers.forEach((h, idx) => {
+        if (h.includes('NOMBRE FUNCIONARIO') || h === 'NOMBRE') colMap.nombre = idx;
+        if (h.includes('TIPO AUS') || h === 'TIPO') colMap.tipo = idx;
+        if (h.includes('FECHA INICIO') || h === 'INICIO') colMap.inicio = idx;
+        if (h.includes('FECHA TERMINO') || h.includes('FECHA TÉRMINO') || h === 'TERMINO') colMap.termino = idx;
+        if (h.includes('N° HRS/DÍAS') || h.includes('N° HRS/DIAS') || h === 'DIAS') colMap.dias = idx;
+        if (h.includes('OBSERVACIONES') || h === 'OBS') colMap.obs = idx;
+    });
+
+    const statusDiv = document.getElementById('migrationStatus');
+    const records = [];
+
+    for (let i = headerRowIndex + 1; i < data.length; i++) {
+        const row = data[i];
+        if (!row || row.length < 2) continue;
+
+        const nombre = (row[colMap.nombre] || 'Desconocido').toString().trim();
+        const tipo = (row[colMap.tipo] || '').toString().trim();
+        const inicio = (row[colMap.inicio] || '').toString().trim();
+        const termino = (row[colMap.termino] || '').toString().trim();
+        const obs = (row[colMap.obs] || '').toString().trim();
+        
+        let diasRaw = (row[colMap.dias] || '0').toString().trim();
+        // Manejar fracciones como 1/2 o 1/4
+        let dias = 0;
+        if (diasRaw.includes('/')) {
+            const [num, den] = diasRaw.split('/');
+            dias = parseFloat(num) / parseFloat(den);
+        } else {
+            dias = parseFloat(diasRaw.replace(',', '.'));
+        }
+        if (isNaN(dias)) dias = 0;
+
+        if (nombre === 'Desconocido' && tipo === '') continue;
+
+        records.push({
+            nombre, tipo, dias, inicio, termino, obs,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        });
+    }
+
+    // Subir a Firestore por lotes (batches) de 500 (límite de Firebase)
+    const batchLimit = 450;
+    for (let i = 0; i < records.length; i += batchLimit) {
+        statusDiv.innerText = `Subiendo registros... (${i} de ${records.length})`;
+        const chunk = records.slice(i, i + batchLimit);
+        const uploadPromises = chunk.map(rec => addDoc(collection(db, "ausencias"), rec));
+        await Promise.all(uploadPromises);
+    }
 }
 
 async function submitRecord() {

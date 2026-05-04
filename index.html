@@ -75,6 +75,11 @@
                 <div class="h-3 w-3 rounded-full bg-orange-400 animate-pulse"></div>
                 <p class="text-sm text-orange-800 font-medium">Configurando Firebase... Por favor, edita <code class="bg-orange-100 px-1 rounded">firebase-config.js</code> con tus credenciales.</p>
             </div>
+            <div class="mt-4 flex gap-3">
+                <button id="openMigrationBtn" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-bold border border-slate-200 transition-colors">
+                    <i class="fas fa-file-import mr-1"></i> Migrar datos desde Google Sheets
+                </button>
+            </div>
             <p class="text-xs text-gray-500 mt-3 flex items-center">
                 <i class="fas fa-info-circle mr-1"></i> Los datos se sincronizan automáticamente en tiempo real. Ya no necesitas URLs de Google Sheets.
             </p>
@@ -253,6 +258,39 @@
                     </button>
                     <button type="button" id="submitRecordBtn" class="px-5 py-2.5 bg-emerald-600 rounded-lg text-white hover:bg-emerald-700 font-bold transition-colors shadow-md flex items-center">
                         <i class="fas fa-paper-plane mr-2"></i> Guardar en Firebase
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Migración -->
+    <div id="migrationModal" class="fixed inset-0 z-[110] hidden overflow-y-auto bg-slate-900/60 backdrop-blur-sm transition-opacity">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-lg w-full border border-gray-100">
+                <div class="bg-slate-800 px-6 py-4">
+                    <h3 class="text-lg leading-6 font-bold text-white flex items-center">
+                        <i class="fas fa-file-import mr-2"></i> Migrar desde Google Sheets
+                    </h3>
+                </div>
+                <div class="px-6 py-5">
+                    <p class="text-sm text-slate-600 mb-4">Pega la URL de tu CSV público de Google Sheets para subir todos los registros antiguos a Firebase de una vez.</p>
+                    <input type="text" id="migrationCsvUrl" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none mb-4">
+                    
+                    <div id="migrationStatus" class="hidden rounded-lg p-3 text-sm font-bold text-center mb-4"></div>
+                    
+                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <p class="text-xs text-blue-700">
+                            <i class="fas fa-info-circle mr-1"></i> Se procesarán los campos: Nombre, Tipo, Días, Inicio y Término. Se convertirán valores como "1/2" a "0.5".
+                        </p>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 rounded-b-xl border-t border-gray-100">
+                    <button type="button" id="closeMigrationBtn" class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-colors">
+                        Cerrar
+                    </button>
+                    <button type="button" id="startMigrationBtn" class="px-5 py-2.5 bg-blue-600 rounded-lg text-white hover:bg-blue-700 font-bold transition-colors shadow-md flex items-center">
+                        <i class="fas fa-play mr-2"></i> Iniciar Migración
                     </button>
                 </div>
             </div>
