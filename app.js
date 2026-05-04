@@ -204,6 +204,10 @@ let currentEditId = null;
 function resetModalState() {
     currentEditId = null;
     document.getElementById('addRecordForm').reset();
+    document.getElementById('formCargo').value = '';
+    document.getElementById('formAvisaA').value = '';
+    document.getElementById('formMedio').value = '';
+    document.getElementById('formReemplazo').value = '';
     
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle mr-2"></i> Registrar Nueva Ausencia';
     const btn = document.getElementById('submitRecordBtn');
@@ -213,7 +217,7 @@ function resetModalState() {
 }
 
 // Exportar funciones al objeto window para que funcionen desde el HTML (onclick)
-window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs) {
+window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs, cargo, avisaA, medio, reemplazo) {
     const formatDateForInput = (dateStr) => {
         if (!dateStr) return '';
         // Firestore guarda ISO o strings, normalizamos
@@ -231,6 +235,10 @@ window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs) {
     document.getElementById('formInicio').value = formatDateForInput(inicio);
     document.getElementById('formTermino').value = formatDateForInput(termino);
     document.getElementById('formObs').value = obs;
+    document.getElementById('formCargo').value = cargo || '';
+    document.getElementById('formAvisaA').value = avisaA || '';
+    document.getElementById('formMedio').value = medio || '';
+    document.getElementById('formReemplazo').value = reemplazo || '';
 
     currentEditId = id;
 
@@ -348,10 +356,14 @@ async function processAndUploadMigration(data) {
         if (h.includes('FECHA REGISTRO') || h.includes('FECHA AVISO')) colMap.fechaAviso = idx;
         if (h.includes('NOMBRE FUNCIONARIO') || h === 'NOMBRE') colMap.nombre = idx;
         if (h.includes('TIPO AUS') || h === 'TIPO') colMap.tipo = idx;
-        if (h.includes('FECHA INICIO') || h === 'INICIO') colMap.inicio = idx;
-        if (h.includes('FECHA TERMINO') || h.includes('FECHA TÉRMINO') || h === 'TERMINO') colMap.termino = idx;
+        if (h.includes('FECHA INICIO') || h === 'INICIO' || h.includes('INICIO/TÉRMIN')) colMap.inicio = idx;
+        if (h.includes('FECHA TERMINO') || h.includes('FECHA TÉRMINO') || h === 'TERMINO' || h.includes('INICIO/TÉRMIN')) colMap.termino = idx;
         if (h.includes('N° HRS/DÍAS') || h.includes('N° HRS/DIAS') || h === 'DIAS') colMap.dias = idx;
         if (h.includes('OBSERVACIONES') || h === 'OBS') colMap.obs = idx;
+        if (h.includes('PERSONA A QUIEN AVISA')) colMap.avisaA = idx;
+        if (h.includes('MEDIO POR EL QUE AVISA')) colMap.medio = idx;
+        if (h.includes('REEMPLAZO')) colMap.reemplazo = idx;
+        if (h.includes('CARGO')) colMap.cargo = idx;
     });
 
     const statusDiv = document.getElementById('migrationStatus');
@@ -362,11 +374,30 @@ async function processAndUploadMigration(data) {
         if (!row || row.length < 2) continue;
 
         const nombre = (row[colMap.nombre] || 'Desconocido').toString().trim();
-        const fechaAviso = (row[colMap.fechaAviso] || '').toString().trim();
         const tipo = (row[colMap.tipo] || '').toString().trim();
-        const inicio = (row[colMap.inicio] || '').toString().trim();
-        const termino = (row[colMap.termino] || '').toString().trim();
         const obs = (row[colMap.obs] || '').toString().trim();
+        const cargo = colMap.cargo !== undefined ? (row[colMap.cargo] || '').toString().trim() : '';
+        const avisaA = colMap.avisaA !== undefined ? (row[colMap.avisaA] || '').toString().trim() : '';
+        const medio = colMap.medio !== undefined ? (row[colMap.medio] || '').toString().trim() : '';
+        const reemplazo = colMap.reemplazo !== undefined ? (row[colMap.reemplazo] || '').toString().trim() : '';
+
+        let inicio = (row[colMap.inicio] || '').toString().trim();
+        let termino = (row[colMap.termino] || '').toString().trim();
+
+        // Manejo especial para columna combinada "FECHA INICIO/TÉRMIN"
+        if (colMap.inicio === colMap.termino && inicio.includes('/')) {
+            const separator = inicio.includes(' – ') ? ' – ' : (inicio.includes(' - ') ? ' - ' : (inicio.includes(' y ') ? ' y ' : null));
+            if (separator) {
+                const parts = inicio.split(separator);
+                inicio = parts[0].trim();
+                termino = parts[1].trim();
+                if (!termino.includes('/') && inicio.includes('/')) {
+                    const month = inicio.split('/')[1];
+                    termino = termino + '/' + month;
+                }
+            }
+        }
+
         
         let diasRaw = (row[colMap.dias] || '0').toString().trim();
         // Manejar fracciones como 1/2 o 1/4
@@ -382,7 +413,7 @@ async function processAndUploadMigration(data) {
         if (nombre === 'Desconocido' && tipo === '') continue;
 
         records.push({
-            nombre, fechaAviso, tipo, dias, inicio, termino, obs,
+            nombre, tipo, dias, inicio, termino, obs, cargo, avisaA, medio, reemplazo,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
         });
@@ -467,6 +498,10 @@ async function submitRecord() {
         inicio: formatToLocal(document.getElementById('formInicio').value),
         termino: formatToLocal(document.getElementById('formTermino').value),
         obs: document.getElementById('formObs').value,
+        cargo: document.getElementById('formCargo').value,
+        avisaA: document.getElementById('formAvisaA').value,
+        medio: document.getElementById('formMedio').value,
+        reemplazo: document.getElementById('formReemplazo').value,
         updatedAt: serverTimestamp()
     };
 
@@ -544,7 +579,11 @@ function fetchData() {
                 inicioStr: item.inicio,
                 termino: fTermino,
                 terminoStr: item.termino,
-                obs: item.obs,
+                obs: item.obs || '',
+                cargo: item.cargo || '',
+                avisaA: item.avisaA || '',
+                medio: item.medio || '',
+                reemplazo: item.reemplazo || '',
                 errorFecha: errorFecha
             });
         });
@@ -793,6 +832,9 @@ function renderTable() {
                     </div>
                 </div>
             </td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
+                ${item.cargo || '-'}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${item.tipo || 'N/A'}</span></td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">${item.diasStr || '-'}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -801,12 +843,21 @@ function renderTable() {
                     <div class="text-slate-600"><i class="far fa-calendar-check text-slate-400 mr-1 w-4"></i> ${item.terminoStr || '-'}</div>
                 </div>
             </td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
+                ${item.avisaA || '-'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
+                ${item.medio || '-'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
+                ${item.reemplazo || '-'}
+            </td>
             <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                 ${item.fechaRegistro}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">${statusHtml}</td>
             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg mr-2"><i class="fas fa-edit"></i></button>
+                <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg mr-2"><i class="fas fa-edit"></i></button>
                 <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded-lg"><i class="fas fa-trash-alt"></i></button>
             </td>
         `;
