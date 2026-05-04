@@ -16,6 +16,14 @@ export const getChileDateStr = (offsetDays = 0) => {
 export const showLoading = () => document.getElementById('loadingOverlay').classList.remove('hidden');
 export const hideLoading = () => document.getElementById('loadingOverlay').classList.add('hidden');
 
+export const updateFirebaseStatus = (isConfigured) => {
+    const statusDiv = document.getElementById('firebaseStatus');
+    if (statusDiv) {
+        if (isConfigured) statusDiv.classList.add('hidden');
+        else statusDiv.classList.remove('hidden');
+    }
+};
+
 export const updateCharts = (ausenciasData) => {
     const typeCtx = document.getElementById('typeChart').getContext('2d');
     const monthCtx = document.getElementById('monthChart').getContext('2d');

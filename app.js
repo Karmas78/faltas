@@ -5,7 +5,7 @@ import {
 
 import { 
     renderTable, updateCharts, showLoading, hideLoading, 
-    getChileDateStr, escapeJS 
+    getChileDateStr, escapeJS, updateFirebaseStatus 
 } from "./ui-utils.js";
 
 // Estado Global
@@ -40,6 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Monitoreo de Sesión
     monitorAuth((user) => {
+        // Ocultar alerta de configuración si hay API Key
+        if (auth && auth.app.options.apiKey !== "TU_API_KEY") {
+            updateFirebaseStatus(true);
+        }
+
         if (user) {
             overlay.classList.add('hidden');
             startSync();
