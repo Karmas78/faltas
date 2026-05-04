@@ -11,6 +11,7 @@ import {
     enableIndexedDbPersistence,
     query, 
     orderBy,
+    limit,
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { 
@@ -197,6 +198,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('startMigrationBtn').addEventListener('click', startMigration);
     document.getElementById('deleteAllBtn').addEventListener('click', deleteAllRecords);
     document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+
+    // Historial Listeners
+    const logsModal = document.getElementById('logsModal');
+    document.getElementById('viewLogsBtn').addEventListener('click', () => {
+        logsModal.classList.remove('hidden');
+        fetchLogs();
+    });
+    
+    const closeLogs = () => logsModal.classList.add('hidden');
+    document.getElementById('closeLogsBtn').addEventListener('click', closeLogs);
+    document.getElementById('closeLogsBtn2').addEventListener('click', closeLogs);
 });
 
 let currentEditId = null;
@@ -259,7 +271,16 @@ window.deleteRecord = async function(id, nombre, inicio, termino) {
     showLoading();
     try {
         await deleteDoc(doc(db, "ausencias", id));
-        // No es necesario llamar a fetchData, onSnapshot lo hará
+        
+        // Registrar Log
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: "ELIMINADO",
+            funcionario: nombre,
+            detalles: `${nombre} (${inicio} al ${termino})`,
+            timestamp: serverTimestamp()
+        });
+
     } catch (error) {
         console.error("Error al borrar:", error);
         alert("Error al borrar: " + error.message);
@@ -320,6 +341,16 @@ async function startMigration() {
                 await processAndUploadMigration(results.data);
                 statusDiv.innerText = "¡Migración completada con éxito!";
                 statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
+                
+                // Registrar Log de Migración
+                await addDoc(collection(db, "logs"), {
+                    usuario: auth.currentUser.email,
+                    accion: "MIGRACIÓN",
+                    funcionario: "SISTEMA",
+                    detalles: `Se importaron ${results.data.length} filas desde CSV externo`,
+                    timestamp: serverTimestamp()
+                });
+
                 setTimeout(() => {
                     document.getElementById('migrationModal').classList.add('hidden');
                     startBtn.disabled = false;
@@ -457,6 +488,15 @@ async function deleteAllRecords() {
 
         await Promise.all(deletePromises);
 
+        // Registrar Log de Borrado Total
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: "BORRADO TOTAL",
+            funcionario: "SISTEMA",
+            detalles: "Se eliminaron todos los registros de la base de datos",
+            timestamp: serverTimestamp()
+        });
+
         statusDiv.innerText = "¡Base de datos vaciada con éxito!";
         statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
         setTimeout(() => statusDiv.classList.add('hidden'), 3000);
@@ -510,8 +550,17 @@ async function submitRecord() {
             await updateDoc(doc(db, "ausencias", currentEditId), payload);
         } else {
             payload.createdAt = serverTimestamp();
-            await addDoc(collection(db, "ausencias"), payload);
+            const newDoc = await addDoc(collection(db, "ausencias"), payload);
         }
+
+        // Registrar Log
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: currentEditId ? "EDITADO" : "CREADO",
+            funcionario: payload.nombre,
+            detalles: `${payload.tipo}: ${payload.inicio} al ${payload.termino}`,
+            timestamp: serverTimestamp()
+        });
         
         btn.innerHTML = '<i class="fas fa-check mr-2"></i> ¡Guardado!';
         setTimeout(() => {
@@ -600,6 +649,61 @@ function fetchData() {
         showError("Error al conectar con Firestore: " + error.message);
         hideLoading();
     });
+}
+
+async function fetchLogs() {
+    const tbody = document.getElementById('logsTableBody');
+    const loader = document.getElementById('logsLoading');
+    
+    tbody.innerHTML = '';
+    loader.classList.remove('hidden');
+
+    try {
+        const q = query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(50));
+        const querySnapshot = await getDocs(q);
+        
+        loader.classList.add('hidden');
+        
+        if (querySnapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">No hay movimientos registrados aún.</td></tr>';
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const log = doc.data();
+            const date = log.timestamp ? log.timestamp.toDate() : new Date();
+            const dateStr = date.toLocaleString('es-CL', { 
+                day: '2-digit', month: '2-digit', year: 'numeric', 
+                hour: '2-digit', minute: '2-digit' 
+            });
+
+            let badgeColor = "bg-blue-100 text-blue-700";
+            if (log.accion === "EDITADO") badgeColor = "bg-amber-100 text-amber-700";
+            if (log.accion === "ELIMINADO") badgeColor = "bg-red-100 text-red-700";
+            if (log.accion === "CREADO") badgeColor = "bg-emerald-100 text-emerald-700";
+
+            const row = document.createElement('tr');
+            row.className = "hover:bg-slate-50 transition-colors";
+            row.innerHTML = `
+                <td class="px-4 py-3 text-xs font-medium text-slate-500">${dateStr}</td>
+                <td class="px-4 py-3 text-xs font-bold text-slate-700">${log.usuario || 'Anónimo'}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${badgeColor}">
+                        ${log.accion}
+                    </span>
+                </td>
+                <td class="px-4 py-3">
+                    <p class="text-xs font-bold text-slate-800">${log.funcionario || ''}</p>
+                    <p class="text-[10px] text-slate-500">${log.detalles || ''}</p>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error("Error al obtener logs:", error);
+        loader.classList.add('hidden');
+        tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-red-500 font-bold">Error al cargar historial: ${error.message}</td></tr>`;
+    }
 }
 
 // --- Funciones de Procesamiento, UI y Análisis ---
