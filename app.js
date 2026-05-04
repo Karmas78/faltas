@@ -205,9 +205,6 @@ function resetModalState() {
     currentEditId = null;
     document.getElementById('addRecordForm').reset();
     
-    // Fecha de aviso por defecto: Hoy
-    document.getElementById('formFechaAviso').value = getChileDateStr(0);
-
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle mr-2"></i> Registrar Nueva Ausencia';
     const btn = document.getElementById('submitRecordBtn');
     btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Guardar en Firebase';
@@ -216,7 +213,7 @@ function resetModalState() {
 }
 
 // Exportar funciones al objeto window para que funcionen desde el HTML (onclick)
-window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs, fechaAviso) {
+window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs) {
     const formatDateForInput = (dateStr) => {
         if (!dateStr) return '';
         // Firestore guarda ISO o strings, normalizamos
@@ -233,7 +230,6 @@ window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs, fecha
     document.getElementById('formDias').value = dias.toString().replace(',', '.');
     document.getElementById('formInicio').value = formatDateForInput(inicio);
     document.getElementById('formTermino').value = formatDateForInput(termino);
-    document.getElementById('formFechaAviso').value = formatDateForInput(fechaAviso);
     document.getElementById('formObs').value = obs;
 
     currentEditId = id;
@@ -466,7 +462,6 @@ async function submitRecord() {
 
     const payload = {
         nombre: document.getElementById('formNombre').value,
-        fechaAviso: formatToLocal(document.getElementById('formFechaAviso').value),
         tipo: document.getElementById('formTipo').value,
         dias: parseFloat(document.getElementById('formDias').value),
         inicio: formatToLocal(document.getElementById('formInicio').value),
@@ -540,7 +535,6 @@ function fetchData() {
             data.push({
                 id: id,
                 funcionario: item.nombre,
-                fechaAviso: item.fechaAviso,
                 fechaRegistro: fRegistroStr,
                 tipo: item.tipo,
                 dias: item.dias,
@@ -806,15 +800,12 @@ function renderTable() {
                     <div class="text-slate-600"><i class="far fa-calendar-check text-slate-400 mr-1 w-4"></i> ${item.terminoStr || '-'}</div>
                 </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
-                ${item.fechaAviso || '-'}
-            </td>
             <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
                 ${item.fechaRegistro}
             </td>
             <td class="px-6 py-4 whitespace-nowrap">${statusHtml}</td>
             <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${item.fechaAviso}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg mr-2"><i class="fas fa-edit"></i></button>
+                <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg mr-2"><i class="fas fa-edit"></i></button>
                 <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded-lg"><i class="fas fa-trash-alt"></i></button>
             </td>
         `;
