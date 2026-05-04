@@ -50,7 +50,7 @@
                         <i class="fas fa-calendar-check text-xl"></i>
                     </div>
                     <span class="font-bold text-xl tracking-tight">Gestión de Ausencias</span>
-                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded-full ml-1">v1.4.3</span>
+                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded-full ml-1">v2.0.0 (Firebase)</span>
                 </div>
                 <div class="flex gap-2">
                     <button id="addRecordBtn" class="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white">
@@ -69,31 +69,14 @@
         <!-- Data Configuration -->
         <div class="mb-8 glass-card rounded-xl p-6 bg-white border border-gray-100">
             <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
-                <i class="fas fa-link mr-2 text-blue-500"></i> Fuente de Datos
+                <i class="fas fa-fire mr-2 text-orange-500"></i> Estado de Firebase
             </h2>
-            <div class="flex flex-col gap-4">
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="relative flex-1">
-                        <i class="fas fa-table absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="csvUrlInput" placeholder="Pega aquí la URL pública del CSV de Google Sheets..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow">
-                    </div>
-                    <button id="saveConfigBtn" class="bg-slate-800 text-white px-6 py-3 rounded-lg hover:bg-slate-700 transition-colors font-medium whitespace-nowrap shadow-md">
-                        <i class="fas fa-cloud-download-alt mr-2"></i> Cargar Datos CSV
-                    </button>
-                </div>
-                
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="relative flex-1">
-                        <i class="fas fa-code absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="scriptUrlInput" placeholder="Pega aquí la URL del Google Apps Script (Para guardar datos)..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-shadow">
-                    </div>
-                    <button id="saveScriptBtn" class="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors font-medium whitespace-nowrap shadow-md">
-                        <i class="fas fa-save mr-2"></i> Guardar Script
-                    </button>
-                </div>
+            <div id="firebaseStatus" class="flex items-center gap-3 p-4 bg-orange-50 rounded-lg border border-orange-100">
+                <div class="h-3 w-3 rounded-full bg-orange-400 animate-pulse"></div>
+                <p class="text-sm text-orange-800 font-medium">Configurando Firebase... Por favor, edita <code class="bg-orange-100 px-1 rounded">firebase-config.js</code> con tus credenciales.</p>
             </div>
             <p class="text-xs text-gray-500 mt-3 flex items-center">
-                <i class="fas fa-info-circle mr-1"></i> Asegúrate de usar var data = sheet.getDataRange().getDisplayValues(); en tu Apps Script para capturar fechas y valores correctamente.
+                <i class="fas fa-info-circle mr-1"></i> Los datos se sincronizan automáticamente en tiempo real. Ya no necesitas URLs de Google Sheets.
             </p>
         </div>
 
@@ -195,7 +178,7 @@
             <!-- States -->
             <div id="loadingIndicator" class="hidden p-12 text-center">
                 <i class="fas fa-circle-notch fa-spin text-4xl mb-4 text-blue-500"></i>
-                <p class="text-slate-500 font-medium">Sincronizando con Google Sheets...</p>
+                <p class="text-slate-500 font-medium">Sincronizando con Firebase Cloud Firestore...</p>
             </div>
             <div id="errorIndicator" class="hidden p-12 text-center text-red-500">
                 <div class="bg-red-50 inline-block p-4 rounded-full mb-4">
@@ -269,13 +252,13 @@
                         Cancelar
                     </button>
                     <button type="button" id="submitRecordBtn" class="px-5 py-2.5 bg-emerald-600 rounded-lg text-white hover:bg-emerald-700 font-bold transition-colors shadow-md flex items-center">
-                        <i class="fas fa-paper-plane mr-2"></i> Guardar en Excel
+                        <i class="fas fa-paper-plane mr-2"></i> Guardar en Firebase
                     </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
