@@ -9,6 +9,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PapaParse for CSV Parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Chart.js for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -78,9 +80,12 @@
                 <div class="h-3 w-3 rounded-full bg-orange-400 animate-pulse"></div>
                 <p class="text-sm text-orange-800 font-medium">Configurando Firebase... Por favor, edita <code class="bg-orange-100 px-1 rounded">firebase-config.js</code> con tus credenciales.</p>
             </div>
-            <div class="mt-4 flex gap-3">
+            <div class="mt-4 flex flex-wrap gap-3">
                 <button id="openMigrationBtn" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-bold border border-slate-200 transition-colors">
                     <i class="fas fa-file-import mr-1"></i> Migrar datos desde Google Sheets
+                </button>
+                <button id="exportCsvBtn" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg font-bold border border-blue-100 transition-colors">
+                    <i class="fas fa-file-export mr-1"></i> Exportar todo a CSV (Backup)
                 </button>
             </div>
             <p class="text-xs text-gray-500 mt-3 flex items-center">
@@ -132,6 +137,26 @@
                     <div class="p-4 bg-emerald-50 rounded-2xl text-emerald-500 shadow-inner">
                         <i class="fas fa-undo text-2xl"></i>
                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Analytics Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="glass-card rounded-xl p-6 bg-white border border-gray-100">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
+                    <i class="fas fa-chart-pie mr-2 text-blue-500"></i> Distribución por Tipo
+                </h3>
+                <div class="h-64 flex items-center justify-center">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+            <div class="glass-card rounded-xl p-6 bg-white border border-gray-100">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center">
+                    <i class="fas fa-chart-line mr-2 text-emerald-500"></i> Ausencias por Mes (2026)
+                </h3>
+                <div class="h-64 flex items-center justify-center">
+                    <canvas id="monthChart"></canvas>
                 </div>
             </div>
         </div>

@@ -34,6 +34,8 @@ try {
 
 // Estado Global
 let ausenciasData = [];
+let typeChartInstance = null;
+let monthChartInstance = null;
 let funcionariosPaCount = {};
 let activeCardFilter = null;
 
@@ -166,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeMigrationBtn').addEventListener('click', () => migModal.classList.add('hidden'));
     document.getElementById('startMigrationBtn').addEventListener('click', startMigration);
     document.getElementById('deleteAllBtn').addEventListener('click', deleteAllRecords);
+    document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
 });
 
 let currentEditId = null;
@@ -516,6 +519,7 @@ function fetchData() {
         updateFilterOptions(tiposAusencia);
         populateFuncionariosList(funcionariosSet);
         calculateDashboardMetrics();
+        updateCharts();
         renderTable();
         hideLoading();
     }, (error) => {
@@ -525,7 +529,102 @@ function fetchData() {
     });
 }
 
-// --- Funciones de Procesamiento y UI (Mantenidas de la v1) ---
+// --- Funciones de Procesamiento, UI y Análisis ---
+
+function updateCharts() {
+    const typeCtx = document.getElementById('typeChart').getContext('2d');
+    const monthCtx = document.getElementById('monthChart').getContext('2d');
+
+    // Datos para Tipos
+    const typeCounts = {};
+    ausenciasData.forEach(item => {
+        if (item.tipo) {
+            const t = item.tipo.toUpperCase();
+            typeCounts[t] = (typeCounts[t] || 0) + 1;
+        }
+    });
+
+    // Datos para Meses (solo 2026)
+    const monthCounts = Array(12).fill(0);
+    ausenciasData.forEach(item => {
+        if (item.inicio) {
+            const date = new Date(item.inicio);
+            if (date.getFullYear() === 2026) {
+                monthCounts[date.getMonth()]++;
+            }
+        }
+    });
+
+    // Chart de Tipos (Doughnut)
+    if (typeChartInstance) typeChartInstance.destroy();
+    typeChartInstance = new Chart(typeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(typeCounts),
+            datasets: [{
+                data: Object.values(typeCounts),
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+
+    // Chart de Meses (Bar)
+    if (monthChartInstance) monthChartInstance.destroy();
+    monthChartInstance = new Chart(monthCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+            datasets: [{
+                label: 'N° Ausencias',
+                data: monthCounts,
+                backgroundColor: '#3b82f6',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+function exportToCSV() {
+    if (ausenciasData.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+    }
+
+    const headers = ["Funcionario", "Tipo", "Dias", "Inicio", "Termino", "Fecha Aviso", "Observaciones"];
+    const rows = ausenciasData.map(item => [
+        `"${item.funcionario}"`,
+        `"${item.tipo}"`,
+        item.dias,
+        `"${item.inicioStr}"`,
+        `"${item.terminoStr}"`,
+        `"${item.fechaAviso || ''}"`,
+        `"${item.obs.replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Backup_Ausencias_${getChileDateStr()}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 function parseDateString(dateStr) {
     if (!dateStr) return null;
