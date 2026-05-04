@@ -25,6 +25,10 @@ let currentEditId = null;
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "TU_API_KEY") {
+            throw new Error("La configuración en firebase-config.js está incompleta o tiene el valor por defecto.");
+        }
+
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
@@ -35,7 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventListeners();
     } catch (error) {
         console.error("Error crítico de inicio:", error);
-        alert("Error al conectar con Firebase. Revisa tu configuración.");
+        alert("⚠️ ERROR DE CONFIGURACIÓN:\n\n" + error.message + "\n\nPor favor, verifica el archivo firebase-config.js");
+        document.getElementById('firebaseStatus').classList.remove('hidden');
     }
 });
 
