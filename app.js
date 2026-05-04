@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMsg = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
     const darkModeBtn = document.getElementById('darkModeBtn');
+    const loginBtn = loginForm.querySelector('button[type="submit"]');
 
     // Modo Oscuro
     const toggleDarkMode = () => {
@@ -58,12 +59,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Login
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+        
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Verificando...';
+
         try {
-            await login(emailInput.value, passwordInput.value);
+            await login(email, password);
             errorMsg.classList.add('hidden');
         } catch (error) {
+            console.error("Error completo de Firebase:", error);
             errorMsg.classList.remove('hidden');
+            
+            // Mostrar mensaje más específico si es posible
+            if (error.code === 'auth/operation-not-allowed') {
+                errorMsg.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> El método de correo está desactivado en Firebase Console.';
+            } else if (error.code === 'auth/invalid-api-key') {
+                errorMsg.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> Error técnico: API Key inválida.';
+            } else {
+                errorMsg.innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> Credenciales incorrectas';
+            }
+
             passwordInput.value = '';
+            passwordInput.focus();
+        } finally {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = 'Entrar <i class="fas fa-arrow-right ml-2"></i>';
         }
     });
 
