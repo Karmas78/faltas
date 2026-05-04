@@ -7,6 +7,7 @@ import {
     doc, 
     updateDoc, 
     deleteDoc, 
+    getDocs,
     query, 
     orderBy,
     serverTimestamp 
@@ -150,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('closeMigrationBtn').addEventListener('click', () => migModal.classList.add('hidden'));
     document.getElementById('startMigrationBtn').addEventListener('click', startMigration);
+    document.getElementById('deleteAllBtn').addEventListener('click', deleteAllRecords);
 });
 
 let currentEditId = null;
@@ -352,6 +354,44 @@ async function processAndUploadMigration(data) {
         const chunk = records.slice(i, i + batchLimit);
         const uploadPromises = chunk.map(rec => addDoc(collection(db, "ausencias"), rec));
         await Promise.all(uploadPromises);
+    }
+}
+
+async function deleteAllRecords() {
+    if (!confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsto borrará permanentemente TODOS los registros de ausencias de Firebase. Esta acción no se puede deshacer.")) {
+        return;
+    }
+    
+    const confirmName = prompt("Para confirmar, escribe la palabra: BORRAR");
+    if (confirmName !== "BORRAR") {
+        alert("Confirmación incorrecta. No se borraron los datos.");
+        return;
+    }
+
+    const statusDiv = document.getElementById('migrationStatus');
+    statusDiv.innerText = "Borrando base de datos...";
+    statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-orange-100 text-orange-700";
+    statusDiv.classList.remove('hidden');
+
+    try {
+        // En Firestore client-side hay que borrar uno por uno
+        const q = query(collection(db, "ausencias"));
+        const querySnapshot = await getDocs(q);
+        
+        const deletePromises = [];
+        querySnapshot.forEach((docSnap) => {
+            deletePromises.push(deleteDoc(doc(db, "ausencias", docSnap.id)));
+        });
+
+        await Promise.all(deletePromises);
+
+        statusDiv.innerText = "¡Base de datos vaciada con éxito!";
+        statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
+        setTimeout(() => statusDiv.classList.add('hidden'), 3000);
+    } catch (err) {
+        console.error(err);
+        statusDiv.innerText = "Error al borrar: " + err.message;
+        statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-red-100 text-red-700";
     }
 }
 
