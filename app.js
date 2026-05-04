@@ -700,12 +700,19 @@ function exportToCSV() {
 }
 
 function parseDateString(dateStr) {
-    if (!dateStr) return null;
+    if (!dateStr || typeof dateStr !== 'string') return null;
     let parts = dateStr.trim().split(/[-/]/);
-    if (parts.length !== 3) return null;
+    if (parts.length < 2) return null;
+    
+    // Si falta el año, asumimos 2026 (según contexto de la hoja)
+    if (parts.length === 2) {
+        parts.push("2026");
+    }
+
     if (parts[0].length === 4) {
         return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
     } else {
+        // Asumimos formato D/M/Y
         return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
     }
 }
@@ -766,6 +773,7 @@ function calculateDashboardMetrics() {
     animateValue('countHoy', ausentesHoy.size);
     animateValue('countManana', ausentesManana.size);
     animateValue('countRetornos', retornos.size);
+    animateValue('countTotal', ausenciasData.length);
 }
 
 function renderTable() {
@@ -776,9 +784,14 @@ function renderTable() {
     const mananaStr = getChileDateStr(1);
 
     tbody.innerHTML = '';
+    console.log(`Renderizando tabla: ${ausenciasData.length} registros totales.`);
+
     let filteredData = ausenciasData.filter(item => {
-        const matchSearch = item.funcionario.toLowerCase().includes(searchTerm);
-        const matchFilter = filterType === '' || item.tipo.toUpperCase() === filterType;
+        const nombre = (item.funcionario || '').toLowerCase();
+        const tipo = (item.tipo || '').toUpperCase();
+
+        const matchSearch = nombre.includes(searchTerm);
+        const matchFilter = filterType === '' || tipo === filterType;
         let matchCard = true;
         if (activeCardFilter) {
             matchCard = false;
@@ -809,7 +822,8 @@ function renderTable() {
         tr.className = 'hover:bg-slate-50 transition-colors duration-150 ease-in-out';
         const paCount = funcionariosPaCount[item.funcionario] || 0;
         const limitReached = paCount > 6;
-        const avatarInitial = item.funcionario.charAt(0).toUpperCase();
+        const funcionarioVal = item.funcionario || 'Sin Nombre';
+        const avatarInitial = funcionarioVal.charAt(0).toUpperCase();
 
         let statusHtml = '';
         if (item.errorFecha) {
