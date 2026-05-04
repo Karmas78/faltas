@@ -1,4 +1,5 @@
-const CACHE_NAME = 'ausencias-pwa-v2.1.4';
+const CACHE_NAME = 'ausencias-pwa-v2.2.0';
+// Actualizado: 2026-05-04 14:23 (Linux Fix)
 const urlsToCache = [
   './',
   './index.html',
