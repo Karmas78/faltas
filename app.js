@@ -12,13 +12,20 @@ import {
     orderBy,
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { 
+    getAuth, 
+    signInWithEmailAndPassword, 
+    onAuthStateChanged, 
+    signOut 
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 // Inicialización de Firebase
-let db;
+let db, auth;
 try {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
+    auth = getAuth(app);
     updateFirebaseStatus(true);
 } catch (error) {
     console.error("Error al inicializar Firebase:", error);
@@ -26,7 +33,6 @@ try {
 }
 
 // Estado Global
-const ACCESS_PASSWORD = "Escuela711";
 let ausenciasData = [];
 let funcionariosPaCount = {};
 let activeCardFilter = null;
@@ -58,45 +64,53 @@ function updateFirebaseStatus(success, errorMsg = "") {
 
 // Inicialización de la App
 document.addEventListener('DOMContentLoaded', () => {
-    // Sistema de Acceso (Login)
+    // Sistema de Acceso (Firebase Auth)
     const overlay = document.getElementById('loginOverlay');
     const loginForm = document.getElementById('loginForm');
+    const emailInput = document.getElementById('loginEmail');
     const passwordInput = document.getElementById('loginPassword');
     const errorMsg = document.getElementById('loginError');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    const checkLogin = () => {
-        if (localStorage.getItem('app_authenticated') === 'true') {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
             overlay.classList.add('hidden');
             if (db && firebaseConfig.apiKey !== "TU_API_KEY") {
                 fetchData();
             }
         } else {
             overlay.classList.remove('hidden');
+            ausenciasData = [];
+            renderTable();
         }
-    };
+    });
 
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (passwordInput.value === ACCESS_PASSWORD) {
-            localStorage.setItem('app_authenticated', 'true');
+        const email = emailInput.value;
+        const password = passwordInput.value;
+        
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
             errorMsg.classList.add('hidden');
-            checkLogin();
-        } else {
+        } catch (error) {
+            console.error("Error de login:", error);
             errorMsg.classList.remove('hidden');
             passwordInput.value = '';
             passwordInput.focus();
         }
     });
 
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn.addEventListener('click', async () => {
         if (confirm('¿Cerrar sesión?')) {
-            localStorage.removeItem('app_authenticated');
-            window.location.reload();
+            try {
+                await signOut(auth);
+                window.location.reload();
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+            }
         }
     });
-
-    checkLogin();
 
     // Registro del Service Worker
     if ('serviceWorker' in navigator) {

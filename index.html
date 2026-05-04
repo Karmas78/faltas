@@ -323,9 +323,14 @@
             <p class="text-slate-500 mb-6">Ingresa la clave de acceso para continuar.</p>
             
             <form id="loginForm" class="space-y-4">
-                <input type="password" id="loginPassword" placeholder="Contraseña" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-center text-lg tracking-widest">
+                <div>
+                    <input type="email" id="loginEmail" placeholder="Correo electrónico" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-center">
+                </div>
+                <div>
+                    <input type="password" id="loginPassword" placeholder="Contraseña" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-widest">
+                </div>
                 <div id="loginError" class="hidden text-red-500 text-sm font-bold animate-bounce">
-                    <i class="fas fa-exclamation-circle mr-1"></i> Clave incorrecta
+                    <i class="fas fa-exclamation-circle mr-1"></i> Credenciales incorrectas
                 </div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-blue-200">
                     Entrar <i class="fas fa-arrow-right ml-2"></i>
