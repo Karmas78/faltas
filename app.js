@@ -105,7 +105,8 @@ function setupAuthListeners() {
 
 function startSync() {
     showLoading();
-    const q = query(collection(db, "ausencias"), orderBy("createdAt", "desc"));
+    // Quitamos el orderBy del servidor para evitar que oculte documentos sin el campo createdAt
+    const q = query(collection(db, "ausencias"));
     onSnapshot(q, (snapshot) => {
         const data = [];
         let paTotal = 0;
@@ -115,7 +116,13 @@ function startSync() {
         snapshot.forEach((doc) => {
             const item = doc.data();
             let fReg = '-';
-            if (item.createdAt) fReg = item.createdAt.toDate().toLocaleDateString('es-CL');
+            let sortTimestamp = 0;
+
+            if (item.createdAt) {
+                const date = item.createdAt.toDate();
+                fReg = date.toLocaleDateString('es-CL');
+                sortTimestamp = date.getTime();
+            }
 
             data.push({
                 id: doc.id,
@@ -125,6 +132,7 @@ function startSync() {
                 inicioStr: item.inicio,
                 terminoStr: item.termino,
                 fechaRegistro: fReg,
+                sortTimestamp: sortTimestamp,
                 obs: item.obs || '',
                 errorFecha: (new Date(item.termino) < new Date(item.inicio))
             });
@@ -134,11 +142,20 @@ function startSync() {
             if (item.tipo?.toUpperCase() === 'P.A.') paTotal += (item.dias || 0);
         });
 
+        // Ordenar en el cliente por timestamp descendente
+        data.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
+
         ausenciasData = data;
         updateDashboard(tipos, funcionarios, paTotal);
         renderTable(data);
         updateCharts();
         hideLoading();
+    }, (error) => {
+        console.error("Error de Firestore:", error);
+        hideLoading();
+        if (error.code === 'permission-denied') {
+            alert("⚠️ Error de Permisos: Revisa las Reglas de Firestore en tu consola de Firebase.");
+        }
     });
 }
 
