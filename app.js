@@ -1013,7 +1013,10 @@ function renderTable() {
                 <div class="flex items-center">
                     <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold shadow-sm border border-blue-200 text-xs">${avatarInitial}</div>
                     <div class="ml-3">
-                        <div class="text-sm font-semibold text-slate-800 flex items-center gap-2">${item.funcionario} ${limitReached ? `<i class="fas fa-exclamation-triangle text-red-500 animate-pulse"></i>` : ''}</div>
+                        <div class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            ${item.funcionario} 
+                            ${limitReached ? `<span class="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-bounce shadow-sm">LÍMITE P.A. EXCEDIDO</span>` : ''}
+                        </div>
                         <div class="text-[10px] text-slate-500 font-medium">${item.cargo || 'Sin cargo'}</div>
                     </div>
                 </div>
@@ -1137,14 +1140,18 @@ function generateSummary() {
 
     sortedNames.forEach(name => {
         const data = summaryData[name];
+        const paVal = data.tipos['P.A.'] || 0;
+        const isOverLimit = paVal > 6;
+
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.className = isOverLimit ? "bg-red-50 hover:bg-red-100 transition-colors" : "hover:bg-slate-50 transition-colors";
         tr.innerHTML = `
-            <td class="px-4 py-3 text-xs font-bold text-slate-700">${name}</td>
+            <td class="px-4 py-3 text-xs font-bold ${isOverLimit ? 'text-red-700' : 'text-slate-700'}">${name}</td>
             <td class="px-4 py-3 text-sm font-extrabold text-center text-amber-800 bg-amber-50/50">${data.total.toFixed(1).replace('.0', '')}</td>
             ${tiposArray.map(t => {
                 const val = data.tipos[t] || 0;
-                return `<td class="px-4 py-3 text-xs text-center ${val > 0 ? 'text-slate-800 font-medium' : 'text-slate-300'}">${val > 0 ? val.toFixed(1).replace('.0', '') : '-'}</td>`;
+                const isPA = t === 'P.A.';
+                return `<td class="px-4 py-3 text-xs text-center ${isPA && isOverLimit ? 'bg-red-600 text-white font-black' : (val > 0 ? 'text-slate-800 font-medium' : 'text-slate-300')}">${val > 0 ? val.toFixed(1).replace('.0', '') : '-'}</td>`;
             }).join('')}
         `;
         summaryBody.appendChild(tr);
