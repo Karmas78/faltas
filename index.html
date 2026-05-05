@@ -110,9 +110,12 @@
                         <i class="fas fa-calendar-check text-xl"></i>
                     </div>
                     <span class="font-bold text-xl tracking-tight">Gestión de Ausencias</span>
-                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded-full ml-1">v2.0.8 (Estable)</span>
+                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded-full ml-1">v2.0.9 (Estable)</span>
                 </div>
                 <div class="flex gap-2">
+                    <button id="summaryBtn" class="bg-amber-500 hover:bg-amber-600 px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white" title="Resumen Estadístico">
+                        <i class="fas fa-chart-bar mr-2"></i> <span class="hidden lg:inline">Resumen</span>
+                    </button>
                     <button id="darkModeBtn" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-all text-white border border-white/20" title="Cambiar tema">
                         <i class="fas fa-moon"></i>
                     </button>
@@ -508,6 +511,44 @@
                     <p class="text-xs text-red-600 font-medium">Zona de peligro:</p>
                     <button type="button" id="deleteAllBtn" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-bold shadow-sm transition-colors">
                         <i class="fas fa-trash-alt mr-1"></i> Borrar TODO de Firebase
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Resumen por Funcionario -->
+    <div id="summaryModal" class="fixed inset-0 z-[130] hidden overflow-y-auto bg-slate-900/60 backdrop-blur-sm transition-opacity">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-4xl w-full border border-gray-100">
+                <div class="bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg leading-6 font-bold text-white flex items-center">
+                        <i class="fas fa-list-check mr-2"></i> Estadísticas de Ausencias por Funcionario
+                    </h3>
+                    <button id="closeSummaryBtn" class="text-white/80 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="px-6 py-5 max-h-[75vh] overflow-y-auto">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 border border-gray-100 rounded-lg">
+                            <thead class="bg-slate-50">
+                                <tr id="summaryTableHead">
+                                    <!-- Headers dynamic -->
+                                </tr>
+                            </thead>
+                            <tbody id="summaryTableBody" class="bg-white divide-y divide-gray-100">
+                                <!-- Data dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 rounded-b-xl border-t border-gray-100">
+                    <p class="text-xs text-slate-400 mr-auto flex items-center italic">
+                        <i class="fas fa-info-circle mr-1"></i> Totales calculados en base a todos los registros
+                    </p>
+                    <button type="button" id="closeSummaryBtn2" class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-colors shadow-sm">
+                        Cerrar
                     </button>
                 </div>
             </div>

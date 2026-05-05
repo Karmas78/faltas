@@ -215,6 +215,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const section = document.getElementById('configSection');
         if (section) section.classList.toggle('hidden');
     });
+
+    // Resumen Listeners
+    const sumModal = document.getElementById('summaryModal');
+    document.getElementById('summaryBtn').addEventListener('click', () => {
+        sumModal.classList.remove('hidden');
+        generateSummary();
+    });
+    
+    const closeSummary = () => sumModal.classList.add('hidden');
+    document.getElementById('closeSummaryBtn').addEventListener('click', closeSummary);
+    document.getElementById('closeSummaryBtn2').addEventListener('click', closeSummary);
 });
 
 let currentEditId = null;
@@ -1077,4 +1088,65 @@ function animateValue(id, end) {
 function escapeJS(str) {
     if (!str) return '';
     return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function generateSummary() {
+    const summaryBody = document.getElementById('summaryTableBody');
+    const summaryHead = document.getElementById('summaryTableHead');
+    
+    if (!summaryBody || !summaryHead) return;
+
+    // 1. Obtener todos los tipos únicos presentes en los datos
+    const tiposSet = new Set();
+    ausenciasData.forEach(item => {
+        if (item.tipo) tiposSet.add(item.tipo.toUpperCase().trim());
+    });
+    const tiposArray = Array.from(tiposSet).sort();
+
+    // 2. Generar Cabecera Dinámica
+    summaryHead.innerHTML = `
+        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Funcionario</th>
+        <th class="px-4 py-3 text-center text-[10px] font-bold text-amber-700 uppercase tracking-wider bg-amber-50">Total Días</th>
+        ${tiposArray.map(t => `<th class="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">${t}</th>`).join('')}
+    `;
+
+    // 3. Agrupar datos por funcionario
+    const summaryData = {};
+    ausenciasData.forEach(item => {
+        const name = item.funcionario || 'Desconocido';
+        const tipo = (item.tipo || 'OTROS').toUpperCase().trim();
+        const dias = parseFloat(item.dias) || 0;
+
+        if (!summaryData[name]) {
+            summaryData[name] = { total: 0, tipos: {} };
+            tiposArray.forEach(t => summaryData[name].tipos[t] = 0);
+        }
+
+        summaryData[name].total += dias;
+        summaryData[name].tipos[tipo] = (summaryData[name].tipos[tipo] || 0) + dias;
+    });
+
+    // 4. Renderizar Filas
+    summaryBody.innerHTML = '';
+    const sortedNames = Object.keys(summaryData).sort();
+    
+    if (sortedNames.length === 0) {
+        summaryBody.innerHTML = `<tr><td colspan="${tiposArray.length + 2}" class="px-4 py-8 text-center text-slate-400 italic">No hay datos suficientes para generar el resumen.</td></tr>`;
+        return;
+    }
+
+    sortedNames.forEach(name => {
+        const data = summaryData[name];
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+            <td class="px-4 py-3 text-xs font-bold text-slate-700">${name}</td>
+            <td class="px-4 py-3 text-sm font-extrabold text-center text-amber-800 bg-amber-50/50">${data.total.toFixed(1).replace('.0', '')}</td>
+            ${tiposArray.map(t => {
+                const val = data.tipos[t] || 0;
+                return `<td class="px-4 py-3 text-xs text-center ${val > 0 ? 'text-slate-800 font-medium' : 'text-slate-300'}">${val > 0 ? val.toFixed(1).replace('.0', '') : '-'}</td>`;
+            }).join('')}
+        `;
+        summaryBody.appendChild(tr);
+    });
 }
