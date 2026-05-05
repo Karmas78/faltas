@@ -50,6 +50,7 @@ let typeChartInstance = null;
 let monthChartInstance = null;
 let funcionariosPaCount = {};
 let activeCardFilter = null;
+let showRecycleBin = false; // Estado para alternar entre tabla principal y papelera
 
 function updateFirebaseStatus(success, errorMsg = "") {
     const statusDiv = document.getElementById('firebaseStatus');
@@ -171,6 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cardRetornos').addEventListener('click', () => setCardFilter('retornos', 'Retornos Inminentes'));
     document.getElementById('clearCardFilterBtn').addEventListener('click', () => setCardFilter(null, ''));
 
+    // Alternar Papelera
+    document.getElementById('toggleRecycleBinBtn').addEventListener('click', toggleRecycleBin);
+
     // Modal
     const modal = document.getElementById('addRecordModal');
     document.getElementById('addRecordBtn').addEventListener('click', () => {
@@ -281,29 +285,93 @@ window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs, cargo
 };
 
 window.deleteRecord = async function(id, nombre, inicio, termino) {
-    if (!confirm(`¿Estás seguro de borrar el registro de:\n${nombre}\nDel ${inicio} al ${termino}?`)) {
+    if (!confirm(`¿Mover a la papelera el registro de:\n${nombre}\nDel ${inicio} al ${termino}?`)) {
         return;
     }
 
     showLoading();
     try {
-        await deleteDoc(doc(db, "ausencias", id));
-        
+        await updateDoc(doc(db, "ausencias", id), { 
+            isDeleted: true,
+            deletedAt: serverTimestamp()
+        });
+
         // Registrar Log
         await addDoc(collection(db, "logs"), {
             usuario: auth.currentUser.email,
-            accion: "ELIMINADO",
+            accion: "MOVIDO A PAPELERA",
             funcionario: nombre,
             detalles: `${nombre} (${inicio} al ${termino})`,
             timestamp: serverTimestamp()
         });
-
     } catch (error) {
-        console.error("Error al borrar:", error);
-        alert("Error al borrar: " + error.message);
+        console.error("Error al mover a papelera:", error);
+        alert("Error: " + error.message);
         hideLoading();
     }
 };
+
+window.restoreRecord = async function(id, nombre) {
+    if (!confirm(`¿Restaurar el registro de ${nombre}?`)) return;
+    
+    showLoading();
+    try {
+        await updateDoc(doc(db, "ausencias", id), { 
+            isDeleted: false,
+            updatedAt: serverTimestamp()
+        });
+        
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: "RESTAURADO",
+            funcionario: nombre,
+            timestamp: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error al restaurar:", error);
+        alert("Error: " + error.message);
+        hideLoading();
+    }
+};
+
+window.permanentDeleteRecord = async function(id, nombre) {
+    if (!confirm(`⚠️ ATENCIÓN: ¿Borrar PERMANENTEMENTE el registro de ${nombre}?\nEsta acción no se puede deshacer.`)) return;
+    
+    showLoading();
+    try {
+        await deleteDoc(doc(db, "ausencias", id));
+        
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: "BORRADO PERMANENTE",
+            funcionario: nombre,
+            timestamp: serverTimestamp()
+        });
+    } catch (error) {
+        console.error("Error al borrar permanente:", error);
+        alert("Error: " + error.message);
+        hideLoading();
+    }
+};
+
+function toggleRecycleBin() {
+    showRecycleBin = !showRecycleBin;
+    const btn = document.getElementById('toggleRecycleBinBtn');
+    const nav = document.querySelector('nav');
+    
+    if (showRecycleBin) {
+        btn.innerHTML = '<i class="fas fa-th-list mr-2"></i> Volver a Lista';
+        btn.classList.replace('bg-white/10', 'bg-orange-500');
+        nav.classList.replace('from-blue-700', 'from-slate-800');
+        nav.classList.replace('to-blue-500', 'to-slate-700');
+    } else {
+        btn.innerHTML = '<i class="fas fa-trash-alt mr-2"></i> Papelera';
+        btn.classList.replace('bg-orange-500', 'bg-white/10');
+        nav.classList.replace('from-slate-800', 'from-blue-700');
+        nav.classList.replace('to-slate-700', 'to-blue-500');
+    }
+    renderTable();
+}
 
 function setCardFilter(filterValue, textLabel) {
     activeCardFilter = filterValue;
@@ -701,7 +769,8 @@ function fetchData() {
                 avisaA: item.avisaA || '',
                 medio: item.medio || '',
                 reemplazo: item.reemplazo || '',
-                errorFecha: errorFecha
+                errorFecha: errorFecha,
+                isDeleted: item.isDeleted || false
             });
         });
 
@@ -783,7 +852,7 @@ function updateCharts() {
     // Datos para Tipos
     const typeCounts = {};
     ausenciasData.forEach(item => {
-        if (item.tipo) {
+        if (item.tipo && !item.isDeleted) {
             const t = item.tipo.toUpperCase();
             typeCounts[t] = (typeCounts[t] || 0) + 1;
         }
@@ -792,7 +861,7 @@ function updateCharts() {
     // Datos para Meses (solo 2026)
     const monthCounts = Array(12).fill(0);
     ausenciasData.forEach(item => {
-        if (item.inicio) {
+        if (item.inicio && !item.isDeleted) {
             const date = new Date(item.inicio);
             if (date.getFullYear() === 2026) {
                 monthCounts[date.getMonth()]++;
@@ -936,7 +1005,7 @@ function calculateDashboardMetrics() {
     const retornos = new Set();
 
     ausenciasData.forEach(item => {
-        if (!item.inicio || !item.termino || item.errorFecha) return;
+        if (!item.inicio || !item.termino || item.errorFecha || item.isDeleted) return;
         if (hoyStr >= item.inicio && hoyStr <= item.termino) ausentesHoy.add(item.funcionario);
         if (mananaStr >= item.inicio && mananaStr <= item.termino) ausentesManana.add(item.funcionario);
         if (item.termino === hoyStr) retornos.add(item.funcionario);
@@ -959,6 +1028,10 @@ function renderTable() {
     console.log(`Renderizando tabla: ${ausenciasData.length} registros totales.`);
 
     let filteredData = ausenciasData.filter(item => {
+        // Filtrar por papelera o lista principal
+        if (showRecycleBin && !item.isDeleted) return false;
+        if (!showRecycleBin && item.isDeleted) return false;
+
         const nombre = (item.funcionario || '').toLowerCase();
         const tipo = (item.tipo || '').toUpperCase();
 
@@ -1048,8 +1121,13 @@ function renderTable() {
             <td class="px-4 py-3 whitespace-nowrap">${statusHtml}</td>
             <td class="sticky-right px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                 <div class="flex items-center justify-center gap-1">
+                ${showRecycleBin ? `
+                    <button onclick="restoreRecord('${item.id}', '${escapeJS(item.funcionario)}')" class="text-emerald-500 hover:text-emerald-700 bg-emerald-50 p-1.5 rounded-lg transition-colors" title="Restaurar"><i class="fas fa-trash-restore"></i></button>
+                    <button onclick="permanentDeleteRecord('${item.id}', '${escapeJS(item.funcionario)}')" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-lg transition-colors" title="Borrar Permanente"><i class="fas fa-times-circle"></i></button>
+                ` : `
                     <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-trash-alt"></i></button>
+                `}
                 </div>
             </td>
         `;
