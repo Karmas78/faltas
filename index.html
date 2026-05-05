@@ -80,24 +80,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8; 
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-        .sticky-right {
-            position: sticky;
-            right: 0;
-            z-index: 20;
-            background-color: white;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
-        }
-        .dark .sticky-right {
-            background-color: #1e293b !important;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
-        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
@@ -110,26 +92,17 @@
                         <i class="fas fa-calendar-check text-xl"></i>
                     </div>
                     <span class="font-bold text-xl tracking-tight">Gestión de Ausencias</span>
-                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded-full ml-1">v2.0.9 (Estable)</span>
+                    <span class="text-xs font-semibold bg-white/20 px-2 py-1 rounded-full ml-1">v2.0.8 (Estable)</span>
                 </div>
                 <div class="flex gap-2">
                     <button id="darkModeBtn" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-all text-white border border-white/20" title="Cambiar tema">
                         <i class="fas fa-moon"></i>
-                    </button>
-                    <button id="summaryBtn" class="bg-amber-500 hover:bg-amber-600 px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white" title="Resumen Estadístico">
-                        <i class="fas fa-chart-bar mr-2"></i> <span class="hidden lg:inline">Resumen</span>
                     </button>
                     <button id="addRecordBtn" class="bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white">
                         <i class="fas fa-plus mr-2"></i> <span class="hidden sm:inline">Nueva Ausencia</span>
                     </button>
                     <button id="refreshBtn" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm">
                         <i class="fas fa-sync-alt mr-2"></i> <span class="hidden sm:inline">Actualizar</span>
-                    </button>
-                    <button id="viewLogsBtn" class="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white">
-                        <i class="fas fa-history mr-2"></i> <span class="hidden sm:inline">Historial</span>
-                    </button>
-                    <button id="configToggleBtn" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-all text-white border border-white/20" title="Configuración de Datos">
-                        <i class="fas fa-cog"></i>
                     </button>
                     <button id="logoutBtn" class="bg-red-500/20 hover:bg-red-500/40 backdrop-blur-sm px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white border border-red-400/30">
                         <i class="fas fa-sign-out-alt mr-2"></i> <span class="hidden sm:inline">Salir</span>
@@ -141,8 +114,8 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Data Configuration (Hidden by default) -->
-        <div id="configSection" class="mb-8 glass-card rounded-xl p-6 bg-white border border-gray-100 hidden animate-fade-in">
+        <!-- Data Configuration -->
+        <div class="mb-8 glass-card rounded-xl p-6 bg-white border border-gray-100">
             <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
                 <i class="fas fa-fire mr-2 text-orange-500"></i> Estado de Firebase
             </h2>
@@ -279,14 +252,17 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Funcionario / Cargo</th>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo / Días</th>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Periodo</th>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Aviso / Medio</th>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reemplazo</th>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">F. Registro</th>
-                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</th>
-                            <th scope="col" class="sticky-right px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-none">Acciones</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Funcionario</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tipo Ausencia</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">N° Días/Hrs</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Periodo</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Avisa a</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Medio</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Reemplazo</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">F. Registro</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Estado Actual</th>
+                            <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="dataTableBody" class="bg-white divide-y divide-gray-100">
@@ -335,29 +311,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Cargo</label>
-                                <input id="formCargo" list="cargosList" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: Docente, Asistente...">
-                                <datalist id="cargosList">
-                                    <option value="Director/a">
-                                    <option value="Inspector/a general">
-                                    <option value="Jefe/a U.T.P.">
-                                    <option value="Orientador/a">
-                                    <option value="Evaluador/a">
-                                    <option value="Coordinadora P.I.E.">
-                                    <option value="Coordinadora Convivencia">
-                                    <option value="Docente">
-                                    <option value="Asistente de aula">
-                                    <option value="Inspector de patio">
-                                    <option value="Docente P.I.E.">
-                                    <option value="Kinesiologo/a">
-                                    <option value="Fonoaudiólogo/a">
-                                    <option value="Asistente Social">
-                                    <option value="Coordinador/a C.R.A.">
-                                    <option value="Encargado/a C.R.A.">
-                                    <option value="Secretaria/o">
-                                    <option value="Psicólogo/a">
-                                    <option value="Encargado/a Enlaces">
-                                    <option value="Asistente de Aseo">
-                                </datalist>
+                                <input id="formCargo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: Docente, Asistente...">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
@@ -389,26 +343,11 @@
                         <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Avisa a</label>
-                                <input id="formAvisaA" list="avisaAList" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: IG, DIR">
-                                <datalist id="avisaAList">
-                                    <option value="Jefe D.E.M.">
-                                    <option value="Director/a">
-                                    <option value="Inspector/a General">
-                                    <option value="Jefe/a U.T.P.">
-                                    <option value="Evaluador/a">
-                                    <option value="Orientador/a">
-                                    <option value="Secretaria/o">
-                                </datalist>
+                                <input id="formAvisaA" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: IG, DIR">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Medio</label>
-                                <input id="formMedio" list="medioList" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: WSP, LLAM">
-                                <datalist id="medioList">
-                                    <option value="Llamada telefónica">
-                                    <option value="E-mail">
-                                    <option value="WhatsApp">
-                                    <option value="En persona">
-                                </datalist>
+                                <input id="formMedio" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: WSP, LLAM">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Reemplazo</label>
@@ -430,48 +369,6 @@
                     </button>
                     <button type="button" id="submitRecordBtn" class="px-5 py-2.5 bg-emerald-600 rounded-lg text-white hover:bg-emerald-700 font-bold transition-colors shadow-md flex items-center">
                         <i class="fas fa-paper-plane mr-2"></i> Guardar en Firebase
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Historial -->
-    <div id="logsModal" class="fixed inset-0 z-[120] hidden overflow-y-auto bg-slate-900/60 backdrop-blur-sm transition-opacity">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-            <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-4xl w-full border border-gray-100">
-                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center">
-                    <h3 class="text-lg leading-6 font-bold text-white flex items-center">
-                        <i class="fas fa-history mr-2"></i> Historial de Cambios Recientes
-                    </h3>
-                    <button id="closeLogsBtn" class="text-white/80 hover:text-white">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div class="px-6 py-5 max-h-[70vh] overflow-y-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Fecha/Hora</th>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Usuario</th>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Acción</th>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase">Detalles</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logsTableBody" class="bg-white divide-y divide-gray-100">
-                            <!-- Logs will be injected here -->
-                        </tbody>
-                    </table>
-                    <div id="logsLoading" class="hidden py-8 text-center">
-                        <i class="fas fa-spinner fa-spin text-2xl text-indigo-500"></i>
-                    </div>
-                </div>
-                <div class="bg-slate-50 px-6 py-4 flex justify-end rounded-b-xl border-t border-gray-100">
-                    <p class="text-xs text-slate-400 mr-auto flex items-center italic">
-                        <i class="fas fa-info-circle mr-1"></i> Se muestran los últimos 50 movimientos
-                    </p>
-                    <button type="button" id="closeLogsBtn2" class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-colors">
-                        Cerrar
                     </button>
                 </div>
             </div>
@@ -511,44 +408,6 @@
                     <p class="text-xs text-red-600 font-medium">Zona de peligro:</p>
                     <button type="button" id="deleteAllBtn" class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-bold shadow-sm transition-colors">
                         <i class="fas fa-trash-alt mr-1"></i> Borrar TODO de Firebase
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Resumen por Funcionario -->
-    <div id="summaryModal" class="fixed inset-0 z-[130] hidden bg-slate-900/60 backdrop-blur-sm transition-opacity">
-        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
-            <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-4xl w-full border border-gray-100">
-                <div class="bg-gradient-to-r from-amber-600 to-amber-500 px-6 py-4 flex justify-between items-center">
-                    <h3 class="text-lg leading-6 font-bold text-white flex items-center">
-                        <i class="fas fa-list-check mr-2"></i> Estadísticas de Ausencias por Funcionario
-                    </h3>
-                    <button id="closeSummaryBtn" class="text-white/80 hover:text-white">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div class="px-6 py-5">
-                    <div class="overflow-auto max-h-[65vh] border border-gray-100 rounded-lg shadow-inner">
-                        <table class="min-w-full divide-y divide-gray-200 border-separate border-spacing-0">
-                            <thead class="bg-slate-50">
-                                <tr id="summaryTableHead">
-                                    <!-- Headers dynamic -->
-                                </tr>
-                            </thead>
-                            <tbody id="summaryTableBody" class="bg-white divide-y divide-gray-100">
-                                <!-- Data dynamic -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 rounded-b-xl border-t border-gray-100">
-                    <p class="text-xs text-slate-400 mr-auto flex items-center italic">
-                        <i class="fas fa-info-circle mr-1"></i> Totales calculados en base a todos los registros
-                    </p>
-                    <button type="button" id="closeSummaryBtn2" class="px-5 py-2.5 bg-white border border-gray-300 rounded-lg text-slate-700 hover:bg-slate-100 font-bold transition-colors shadow-sm">
-                        Cerrar
                     </button>
                 </div>
             </div>
