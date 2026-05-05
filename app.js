@@ -11,6 +11,7 @@ import {
     enableIndexedDbPersistence,
     query, 
     orderBy,
+    limit,
     serverTimestamp 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { 
@@ -197,6 +198,34 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('startMigrationBtn').addEventListener('click', startMigration);
     document.getElementById('deleteAllBtn').addEventListener('click', deleteAllRecords);
     document.getElementById('exportCsvBtn').addEventListener('click', exportToCSV);
+
+    // Historial Listeners
+    const logsModal = document.getElementById('logsModal');
+    document.getElementById('viewLogsBtn').addEventListener('click', () => {
+        logsModal.classList.remove('hidden');
+        fetchLogs();
+    });
+    
+    const closeLogs = () => logsModal.classList.add('hidden');
+    document.getElementById('closeLogsBtn').addEventListener('click', closeLogs);
+    document.getElementById('closeLogsBtn2').addEventListener('click', closeLogs);
+
+    // Toggle Configuración
+    document.getElementById('configToggleBtn').addEventListener('click', () => {
+        const section = document.getElementById('configSection');
+        if (section) section.classList.toggle('hidden');
+    });
+
+    // Resumen Listeners
+    const sumModal = document.getElementById('summaryModal');
+    document.getElementById('summaryBtn').addEventListener('click', () => {
+        sumModal.classList.remove('hidden');
+        generateSummary();
+    });
+    
+    const closeSummary = () => sumModal.classList.add('hidden');
+    document.getElementById('closeSummaryBtn').addEventListener('click', closeSummary);
+    document.getElementById('closeSummaryBtn2').addEventListener('click', closeSummary);
 });
 
 let currentEditId = null;
@@ -259,7 +288,16 @@ window.deleteRecord = async function(id, nombre, inicio, termino) {
     showLoading();
     try {
         await deleteDoc(doc(db, "ausencias", id));
-        // No es necesario llamar a fetchData, onSnapshot lo hará
+        
+        // Registrar Log
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: "ELIMINADO",
+            funcionario: nombre,
+            detalles: `${nombre} (${inicio} al ${termino})`,
+            timestamp: serverTimestamp()
+        });
+
     } catch (error) {
         console.error("Error al borrar:", error);
         alert("Error al borrar: " + error.message);
@@ -320,6 +358,16 @@ async function startMigration() {
                 await processAndUploadMigration(results.data);
                 statusDiv.innerText = "¡Migración completada con éxito!";
                 statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
+                
+                // Registrar Log de Migración
+                await addDoc(collection(db, "logs"), {
+                    usuario: auth.currentUser.email,
+                    accion: "MIGRACIÓN",
+                    funcionario: "SISTEMA",
+                    detalles: `Se importaron ${results.data.length} filas desde CSV externo`,
+                    timestamp: serverTimestamp()
+                });
+
                 setTimeout(() => {
                     document.getElementById('migrationModal').classList.add('hidden');
                     startBtn.disabled = false;
@@ -412,9 +460,29 @@ async function processAndUploadMigration(data) {
 
         if (nombre === 'Desconocido' && tipo === '') continue;
 
+        // Intentar obtener la fecha de registro de la primera columna (row[0])
+        const fechaRegistroStr = (row[0] || '').toString().trim();
+        let createdAt = serverTimestamp();
+        
+        if (fechaRegistroStr) {
+            const parts = fechaRegistroStr.split(/[-/]/);
+            if (parts.length === 3) {
+                let d, m, y;
+                if (parts[0].length === 4) { // YYYY-MM-DD
+                    [y, m, d] = parts;
+                } else { // DD-MM-YYYY
+                    [d, m, y] = parts;
+                }
+                const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 12, 0, 0);
+                if (!isNaN(dateObj.getTime())) {
+                    createdAt = dateObj;
+                }
+            }
+        }
+
         records.push({
             nombre, tipo, dias, inicio, termino, obs, cargo, avisaA, medio, reemplazo,
-            createdAt: serverTimestamp(),
+            createdAt: createdAt,
             updatedAt: serverTimestamp()
         });
     }
@@ -457,6 +525,15 @@ async function deleteAllRecords() {
 
         await Promise.all(deletePromises);
 
+        // Registrar Log de Borrado Total
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: "BORRADO TOTAL",
+            funcionario: "SISTEMA",
+            detalles: "Se eliminaron todos los registros de la base de datos",
+            timestamp: serverTimestamp()
+        });
+
         statusDiv.innerText = "¡Base de datos vaciada con éxito!";
         statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
         setTimeout(() => statusDiv.classList.add('hidden'), 3000);
@@ -481,6 +558,37 @@ async function submitRecord() {
 
     const btn = document.getElementById('submitRecordBtn');
     const originalText = btn.innerHTML;
+
+    // Obtener valores para validar
+    const nombre = document.getElementById('formNombre').value.trim();
+    const inicioRaw = document.getElementById('formInicio').value;
+    const terminoRaw = document.getElementById('formTermino').value;
+    const dias = parseFloat(document.getElementById('formDias').value);
+
+    // --- VALIDACIONES ---
+    
+    // 1. Validar Nombre
+    if (!nombre) {
+        showFormFeedback('Error: El nombre del funcionario es obligatorio.', true);
+        return;
+    }
+
+    // 2. Validar Rango de Fechas
+    if (inicioRaw && terminoRaw) {
+        const fechaInicio = new Date(inicioRaw + "T12:00:00"); // Noon to avoid TZ issues
+        const fechaTermino = new Date(terminoRaw + "T12:00:00");
+        if (fechaInicio > fechaTermino) {
+            showFormFeedback('Error: La fecha de inicio no puede ser posterior a la fecha de término.', true);
+            return;
+        }
+    }
+
+    // 3. Validar Días/Horas
+    if (isNaN(dias) || dias <= 0) {
+        showFormFeedback('Error: La cantidad de días/horas debe ser un número mayor a cero.', true);
+        return;
+    }
+
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
     btn.disabled = true;
 
@@ -510,8 +618,17 @@ async function submitRecord() {
             await updateDoc(doc(db, "ausencias", currentEditId), payload);
         } else {
             payload.createdAt = serverTimestamp();
-            await addDoc(collection(db, "ausencias"), payload);
+            const newDoc = await addDoc(collection(db, "ausencias"), payload);
         }
+
+        // Registrar Log
+        await addDoc(collection(db, "logs"), {
+            usuario: auth.currentUser.email,
+            accion: currentEditId ? "EDITADO" : "CREADO",
+            funcionario: payload.nombre,
+            detalles: `${payload.tipo}: ${payload.inicio} al ${payload.termino}`,
+            timestamp: serverTimestamp()
+        });
         
         btn.innerHTML = '<i class="fas fa-check mr-2"></i> ¡Guardado!';
         setTimeout(() => {
@@ -600,6 +717,61 @@ function fetchData() {
         showError("Error al conectar con Firestore: " + error.message);
         hideLoading();
     });
+}
+
+async function fetchLogs() {
+    const tbody = document.getElementById('logsTableBody');
+    const loader = document.getElementById('logsLoading');
+    
+    tbody.innerHTML = '';
+    loader.classList.remove('hidden');
+
+    try {
+        const q = query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(50));
+        const querySnapshot = await getDocs(q);
+        
+        loader.classList.add('hidden');
+        
+        if (querySnapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-slate-400 italic">No hay movimientos registrados aún.</td></tr>';
+            return;
+        }
+
+        querySnapshot.forEach((doc) => {
+            const log = doc.data();
+            const date = log.timestamp ? log.timestamp.toDate() : new Date();
+            const dateStr = date.toLocaleString('es-CL', { 
+                day: '2-digit', month: '2-digit', year: 'numeric', 
+                hour: '2-digit', minute: '2-digit' 
+            });
+
+            let badgeColor = "bg-blue-100 text-blue-700";
+            if (log.accion === "EDITADO") badgeColor = "bg-amber-100 text-amber-700";
+            if (log.accion === "ELIMINADO") badgeColor = "bg-red-100 text-red-700";
+            if (log.accion === "CREADO") badgeColor = "bg-emerald-100 text-emerald-700";
+
+            const row = document.createElement('tr');
+            row.className = "hover:bg-slate-50 transition-colors";
+            row.innerHTML = `
+                <td class="px-4 py-3 text-xs font-medium text-slate-500">${dateStr}</td>
+                <td class="px-4 py-3 text-xs font-bold text-slate-700">${log.usuario || 'Anónimo'}</td>
+                <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${badgeColor}">
+                        ${log.accion}
+                    </span>
+                </td>
+                <td class="px-4 py-3">
+                    <p class="text-xs font-bold text-slate-800">${log.funcionario || ''}</p>
+                    <p class="text-[10px] text-slate-500">${log.detalles || ''}</p>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    } catch (error) {
+        console.error("Error al obtener logs:", error);
+        loader.classList.add('hidden');
+        tbody.innerHTML = `<tr><td colspan="4" class="px-4 py-8 text-center text-red-500 font-bold">Error al cargar historial: ${error.message}</td></tr>`;
+    }
 }
 
 // --- Funciones de Procesamiento, UI y Análisis ---
@@ -837,42 +1009,48 @@ function renderTable() {
         }
 
         tr.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td class="px-4 py-3 whitespace-nowrap">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold shadow-sm border border-blue-200">${avatarInitial}</div>
-                    <div class="ml-4">
-                        <div class="text-sm font-semibold text-slate-800 flex items-center gap-2">${item.funcionario} ${limitReached ? `<i class="fas fa-exclamation-triangle text-red-500 animate-pulse"></i>` : ''}</div>
-                        <div class="text-xs text-slate-500">${paCount > 0 ? paCount + ' días P.A.' : 'Sin registro P.A.'}</div>
+                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold shadow-sm border border-blue-200 text-xs">${avatarInitial}</div>
+                    <div class="ml-3">
+                        <div class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                            ${item.funcionario} 
+                            ${limitReached ? `<span class="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-bounce shadow-sm">LÍMITE P.A. EXCEDIDO</span>` : ''}
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-medium">${item.cargo || 'Sin cargo'}</div>
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
-                ${item.cargo || '-'}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${item.tipo || 'N/A'}</span></td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">${item.diasStr || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <div class="flex flex-col gap-1">
-                    <div class="text-slate-600"><i class="far fa-calendar-alt text-slate-400 mr-1 w-4"></i> ${item.inicioStr || '-'}</div>
-                    <div class="text-slate-600"><i class="far fa-calendar-check text-slate-400 mr-1 w-4"></i> ${item.terminoStr || '-'}</div>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex flex-col">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 w-fit">${item.tipo || 'N/A'}</span>
+                    <span class="text-xs text-slate-600 font-bold mt-1">${item.diasStr} días/hrs</span>
                 </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
-                ${item.avisaA || '-'}
+            <td class="px-4 py-3 whitespace-nowrap text-[11px]">
+                <div class="flex flex-col gap-0.5">
+                    <div class="text-slate-600"><i class="far fa-calendar-alt text-slate-400 mr-1"></i> ${item.inicioStr || '-'}</div>
+                    <div class="text-slate-600"><i class="far fa-calendar-check text-slate-400 mr-1"></i> ${item.terminoStr || '-'}</div>
+                </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
-                ${item.medio || '-'}
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex flex-col">
+                    <div class="text-[11px] font-bold text-slate-700"><i class="fas fa-user-tie text-slate-400 mr-1"></i> ${item.avisaA || '-'}</div>
+                    <div class="text-[10px] text-slate-500 italic">${item.medio || '-'}</div>
+                </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
+            <td class="px-4 py-3 whitespace-nowrap text-[11px] text-slate-600">
                 ${item.reemplazo || '-'}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
+            <td class="px-4 py-3 whitespace-nowrap text-[10px] text-slate-500">
                 ${item.fechaRegistro}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">${statusHtml}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg mr-2"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded-lg"><i class="fas fa-trash-alt"></i></button>
+            <td class="px-4 py-3 whitespace-nowrap">${statusHtml}</td>
+            <td class="sticky-right px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                <div class="flex items-center justify-center gap-1">
+                    <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-trash-alt"></i></button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
@@ -913,4 +1091,69 @@ function animateValue(id, end) {
 function escapeJS(str) {
     if (!str) return '';
     return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function generateSummary() {
+    const summaryBody = document.getElementById('summaryTableBody');
+    const summaryHead = document.getElementById('summaryTableHead');
+    
+    if (!summaryBody || !summaryHead) return;
+
+    // 1. Obtener todos los tipos únicos presentes en los datos
+    const tiposSet = new Set();
+    ausenciasData.forEach(item => {
+        if (item.tipo) tiposSet.add(item.tipo.toUpperCase().trim());
+    });
+    const tiposArray = Array.from(tiposSet).sort();
+
+    // 2. Generar Cabecera Dinámica
+    summaryHead.innerHTML = `
+        <th class="sticky top-0 z-20 bg-slate-100 dark:bg-slate-700 px-4 py-3 text-left text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider shadow-sm">Funcionario</th>
+        <th class="sticky top-0 z-20 bg-amber-50 dark:bg-amber-900/40 px-4 py-3 text-center text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider shadow-sm">Total Días</th>
+        ${tiposArray.map(t => `<th class="sticky top-0 z-20 bg-slate-100 dark:bg-slate-700 px-4 py-3 text-center text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider shadow-sm">${t}</th>`).join('')}
+    `;
+
+    // 3. Agrupar datos por funcionario
+    const summaryData = {};
+    ausenciasData.forEach(item => {
+        const name = item.funcionario || 'Desconocido';
+        const tipo = (item.tipo || 'OTROS').toUpperCase().trim();
+        const dias = parseFloat(item.dias) || 0;
+
+        if (!summaryData[name]) {
+            summaryData[name] = { total: 0, tipos: {} };
+            tiposArray.forEach(t => summaryData[name].tipos[t] = 0);
+        }
+
+        summaryData[name].total += dias;
+        summaryData[name].tipos[tipo] = (summaryData[name].tipos[tipo] || 0) + dias;
+    });
+
+    // 4. Renderizar Filas
+    summaryBody.innerHTML = '';
+    const sortedNames = Object.keys(summaryData).sort();
+    
+    if (sortedNames.length === 0) {
+        summaryBody.innerHTML = `<tr><td colspan="${tiposArray.length + 2}" class="px-4 py-8 text-center text-slate-400 italic">No hay datos suficientes para generar el resumen.</td></tr>`;
+        return;
+    }
+
+    sortedNames.forEach(name => {
+        const data = summaryData[name];
+        const paVal = data.tipos['P.A.'] || 0;
+        const isOverLimit = paVal > 6;
+
+        const tr = document.createElement('tr');
+        tr.className = isOverLimit ? "bg-red-50 hover:bg-red-100 transition-colors" : "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+            <td class="px-4 py-3 text-xs font-bold ${isOverLimit ? 'text-red-700' : 'text-slate-700'}">${name}</td>
+            <td class="px-4 py-3 text-sm font-extrabold text-center text-amber-800 bg-amber-50/50">${data.total.toFixed(1).replace('.0', '')}</td>
+            ${tiposArray.map(t => {
+                const val = data.tipos[t] || 0;
+                const isPA = t === 'P.A.';
+                return `<td class="px-4 py-3 text-xs text-center ${isPA && isOverLimit ? 'bg-red-600 text-white font-black' : (val > 0 ? 'text-slate-800 font-medium' : 'text-slate-300')}">${val > 0 ? val.toFixed(1).replace('.0', '') : '-'}</td>`;
+            }).join('')}
+        `;
+        summaryBody.appendChild(tr);
+    });
 }
