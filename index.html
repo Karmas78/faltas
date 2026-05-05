@@ -87,6 +87,17 @@
         .animate-fade-in {
             animation: fadeIn 0.3s ease-out forwards;
         }
+        .sticky-right {
+            position: sticky;
+            right: 0;
+            z-index: 20;
+            background-color: white;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+        }
+        .dark .sticky-right {
+            background-color: #1e293b !important;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
@@ -265,17 +276,14 @@
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-slate-50">
                         <tr>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Funcionario</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Cargo</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Tipo Ausencia</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">N° Días/Hrs</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Periodo</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Avisa a</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Medio</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Reemplazo</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">F. Registro</th>
-                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Estado Actual</th>
-                            <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Funcionario / Cargo</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tipo / Días</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Periodo</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Aviso / Medio</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reemplazo</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">F. Registro</th>
+                            <th scope="col" class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Estado</th>
+                            <th scope="col" class="sticky-right px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider shadow-none">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="dataTableBody" class="bg-white divide-y divide-gray-100">

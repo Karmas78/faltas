@@ -998,42 +998,45 @@ function renderTable() {
         }
 
         tr.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td class="px-4 py-3 whitespace-nowrap">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold shadow-sm border border-blue-200">${avatarInitial}</div>
-                    <div class="ml-4">
+                    <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-blue-700 font-bold shadow-sm border border-blue-200 text-xs">${avatarInitial}</div>
+                    <div class="ml-3">
                         <div class="text-sm font-semibold text-slate-800 flex items-center gap-2">${item.funcionario} ${limitReached ? `<i class="fas fa-exclamation-triangle text-red-500 animate-pulse"></i>` : ''}</div>
-                        <div class="text-xs text-slate-500">${paCount > 0 ? paCount + ' días P.A.' : 'Sin registro P.A.'}</div>
+                        <div class="text-[10px] text-slate-500 font-medium">${item.cargo || 'Sin cargo'}</div>
                     </div>
                 </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
-                ${item.cargo || '-'}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap"><span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${item.tipo || 'N/A'}</span></td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">${item.diasStr || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <div class="flex flex-col gap-1">
-                    <div class="text-slate-600"><i class="far fa-calendar-alt text-slate-400 mr-1 w-4"></i> ${item.inicioStr || '-'}</div>
-                    <div class="text-slate-600"><i class="far fa-calendar-check text-slate-400 mr-1 w-4"></i> ${item.terminoStr || '-'}</div>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex flex-col">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 w-fit">${item.tipo || 'N/A'}</span>
+                    <span class="text-xs text-slate-600 font-bold mt-1">${item.diasStr} días/hrs</span>
                 </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
-                ${item.avisaA || '-'}
+            <td class="px-4 py-3 whitespace-nowrap text-[11px]">
+                <div class="flex flex-col gap-0.5">
+                    <div class="text-slate-600"><i class="far fa-calendar-alt text-slate-400 mr-1"></i> ${item.inicioStr || '-'}</div>
+                    <div class="text-slate-600"><i class="far fa-calendar-check text-slate-400 mr-1"></i> ${item.terminoStr || '-'}</div>
+                </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
-                ${item.medio || '-'}
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex flex-col">
+                    <div class="text-[11px] font-bold text-slate-700"><i class="fas fa-user-tie text-slate-400 mr-1"></i> ${item.avisaA || '-'}</div>
+                    <div class="text-[10px] text-slate-500 italic">${item.medio || '-'}</div>
+                </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-600">
+            <td class="px-4 py-3 whitespace-nowrap text-[11px] text-slate-600">
                 ${item.reemplazo || '-'}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">
+            <td class="px-4 py-3 whitespace-nowrap text-[10px] text-slate-500">
                 ${item.fechaRegistro}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">${statusHtml}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-lg mr-2"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 px-3 py-1 rounded-lg"><i class="fas fa-trash-alt"></i></button>
+            <td class="px-4 py-3 whitespace-nowrap">${statusHtml}</td>
+            <td class="sticky-right px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
+                <div class="flex items-center justify-center gap-1">
+                    <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-trash-alt"></i></button>
+                </div>
             </td>
         `;
         tbody.appendChild(tr);
