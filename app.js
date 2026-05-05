@@ -443,9 +443,29 @@ async function processAndUploadMigration(data) {
 
         if (nombre === 'Desconocido' && tipo === '') continue;
 
+        // Intentar obtener la fecha de registro de la primera columna (row[0])
+        const fechaRegistroStr = (row[0] || '').toString().trim();
+        let createdAt = serverTimestamp();
+        
+        if (fechaRegistroStr) {
+            const parts = fechaRegistroStr.split(/[-/]/);
+            if (parts.length === 3) {
+                let d, m, y;
+                if (parts[0].length === 4) { // YYYY-MM-DD
+                    [y, m, d] = parts;
+                } else { // DD-MM-YYYY
+                    [d, m, y] = parts;
+                }
+                const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d), 12, 0, 0);
+                if (!isNaN(dateObj.getTime())) {
+                    createdAt = dateObj;
+                }
+            }
+        }
+
         records.push({
             nombre, tipo, dias, inicio, termino, obs, cargo, avisaA, medio, reemplazo,
-            createdAt: serverTimestamp(),
+            createdAt: createdAt,
             updatedAt: serverTimestamp()
         });
     }
