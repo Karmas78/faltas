@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ausencias-pwa-v2.0.8';
+const CACHE_NAME = 'ausencias-pwa-v2.0.8-rev1';
 const urlsToCache = [
   './',
   './index.html',
