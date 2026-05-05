@@ -45,6 +45,16 @@ try {
 }
 
 // Estado Global
+// --- CONFIGURACIÓN DE ROLES ---
+const ADMIN_EMAILS = [
+    'karmas78@gmail.com', // El usuario actual
+    'admin@sistema.com'    // Otros admins opcionales
+];
+
+function isAdmin(email) {
+    return email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
 let ausenciasData = [];
 let typeChartInstance = null;
 let monthChartInstance = null;
@@ -106,6 +116,18 @@ document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             overlay.classList.add('hidden');
+            
+            // Control de acceso para administradores
+            const userIsAdmin = isAdmin(user.email);
+            document.body.classList.toggle('is-admin', userIsAdmin);
+            
+            // Ocultar elementos de administración si no es admin
+            const adminElements = ['openMigrationBtn', 'deleteAllBtn', 'configToggleBtn'];
+            adminElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('hidden', !userIsAdmin);
+            });
+
             if (db && firebaseConfig.apiKey !== "TU_API_KEY") {
                 fetchData();
             }
@@ -281,25 +303,16 @@ window.editRecord = function(id, nombre, tipo, dias, inicio, termino, obs, cargo
 };
 
 window.deleteRecord = async function(id, nombre, inicio, termino) {
-    if (!confirm(`¿Estás seguro de borrar el registro de:\n${nombre}\nDel ${inicio} al ${termino}?`)) {
+    if (!isAdmin(auth.currentUser.email)) {
+        alert("No tienes permisos para eliminar registros.");
         return;
     }
 
-    showLoading();
-    try {
-        await deleteDoc(doc(db, "ausencias", id));
-        
-        // Registrar Log
-        await addDoc(collection(db, "logs"), {
-            usuario: auth.currentUser.email,
-            accion: "ELIMINADO",
-            funcionario: nombre,
-            detalles: `${nombre} (${inicio} al ${termino})`,
-            timestamp: serverTimestamp()
-        });
+    if (!confirm(`¿Mover a la papelera el registro de ${nombre} (${inicio} - ${termino})?`)) {
+        return;
+    }
 
-    } catch (error) {
-        console.error("Error al borrar:", error);
+    try {
         alert("Error al borrar: " + error.message);
         hideLoading();
     }
@@ -498,48 +511,64 @@ async function processAndUploadMigration(data) {
 }
 
 async function deleteAllRecords() {
-    if (!confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsto borrará permanentemente TODOS los registros de ausencias de Firebase. Esta acción no se puede deshacer.")) {
+    if (!isAdmin(auth.currentUser.email)) {
+        alert("No tienes permisos para esta acción.");
+        return;
+    }
+
+    if (!confirm("⚠️ ¿MOVER TODO A LA PAPELERA?\n\nTodos los registros de ausencias se moverán a la papelera de reciclaje.")) {
         return;
     }
     
     const confirmName = prompt("Para confirmar, escribe la palabra: BORRAR");
     if (confirmName !== "BORRAR") {
-        alert("Confirmación incorrecta. No se borraron los datos.");
+        alert("Confirmación incorrecta.");
         return;
     }
 
     const statusDiv = document.getElementById('migrationStatus');
-    statusDiv.innerText = "Borrando base de datos...";
+    statusDiv.innerText = "Moviendo a papelera...";
     statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-orange-100 text-orange-700";
     statusDiv.classList.remove('hidden');
 
     try {
-        // En Firestore client-side hay que borrar uno por uno
         const q = query(collection(db, "ausencias"));
         const querySnapshot = await getDocs(q);
         
-        const deletePromises = [];
+        const movePromises = [];
         querySnapshot.forEach((docSnap) => {
-            deletePromises.push(deleteDoc(doc(db, "ausencias", docSnap.id)));
+            const data = docSnap.data();
+            const docRef = doc(db, "ausencias", docSnap.id);
+            
+            // Mover a eliminados y borrar original
+            const p = addDoc(collection(db, "eliminados"), {
+                ...data,
+                deletedAt: serverTimestamp(),
+                deletedBy: auth.currentUser.email,
+                originalId: docSnap.id,
+                batchDelete: true
+            }).then(() => deleteDoc(docRef));
+            
+            movePromises.push(p);
         });
 
-        await Promise.all(deletePromises);
+        await Promise.all(movePromises);
 
         // Registrar Log de Borrado Total
         await addDoc(collection(db, "logs"), {
             usuario: auth.currentUser.email,
-            accion: "BORRADO TOTAL",
+            accion: "BORRADO MASIVO (Papelera)",
             funcionario: "SISTEMA",
-            detalles: "Se eliminaron todos los registros de la base de datos",
+            detalles: "Se movieron todos los registros a la papelera",
             timestamp: serverTimestamp()
         });
 
-        statusDiv.innerText = "¡Base de datos vaciada con éxito!";
+        statusDiv.innerText = "¡Registros movidos a papelera con éxito!";
         statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-emerald-100 text-emerald-700";
         setTimeout(() => statusDiv.classList.add('hidden'), 3000);
     } catch (err) {
         console.error(err);
-        statusDiv.innerText = "Error al borrar: " + err.message;
+        statusDiv.innerText = "Error al procesar: " + err.message;
         statusDiv.className = "rounded-lg p-3 text-sm font-bold text-center mb-4 bg-red-100 text-red-700";
     }
 }
@@ -1049,7 +1078,9 @@ function renderTable() {
             <td class="sticky-right px-4 py-3 whitespace-nowrap text-center text-sm font-medium">
                 <div class="flex items-center justify-center gap-1">
                     <button onclick="editRecord('${item.id}', '${escapeJS(item.funcionario)}', '${escapeJS(item.tipo)}', '${item.dias}', '${item.inicioStr}', '${item.terminoStr}', '${escapeJS(item.obs)}', '${escapeJS(item.cargo)}', '${escapeJS(item.avisaA)}', '${escapeJS(item.medio)}', '${escapeJS(item.reemplazo)}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-edit"></i></button>
+                    ${isAdmin(auth.currentUser?.email) ? `
                     <button onclick="deleteRecord('${item.id}', '${escapeJS(item.funcionario)}', '${item.inicioStr}', '${item.terminoStr}')" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-lg transition-colors"><i class="fas fa-trash-alt"></i></button>
+                    ` : ''}
                 </div>
             </td>
         `;
