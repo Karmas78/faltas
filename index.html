@@ -80,6 +80,13 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94a3b8; 
         }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
@@ -107,6 +114,9 @@
                     <button id="viewLogsBtn" class="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white">
                         <i class="fas fa-history mr-2"></i> <span class="hidden sm:inline">Historial</span>
                     </button>
+                    <button id="configToggleBtn" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-all text-white border border-white/20" title="Configuración de Datos">
+                        <i class="fas fa-cog"></i>
+                    </button>
                     <button id="logoutBtn" class="bg-red-500/20 hover:bg-red-500/40 backdrop-blur-sm px-4 py-2 rounded-lg transition-all flex items-center font-medium shadow-sm text-white border border-red-400/30">
                         <i class="fas fa-sign-out-alt mr-2"></i> <span class="hidden sm:inline">Salir</span>
                     </button>
@@ -117,8 +127,8 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Data Configuration -->
-        <div class="mb-8 glass-card rounded-xl p-6 bg-white border border-gray-100">
+        <!-- Data Configuration (Hidden by default) -->
+        <div id="configSection" class="mb-8 glass-card rounded-xl p-6 bg-white border border-gray-100 hidden animate-fade-in">
             <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">
                 <i class="fas fa-fire mr-2 text-orange-500"></i> Estado de Firebase
             </h2>

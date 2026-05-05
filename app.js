@@ -209,6 +209,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeLogs = () => logsModal.classList.add('hidden');
     document.getElementById('closeLogsBtn').addEventListener('click', closeLogs);
     document.getElementById('closeLogsBtn2').addEventListener('click', closeLogs);
+
+    // Toggle Configuración
+    document.getElementById('configToggleBtn').addEventListener('click', () => {
+        const section = document.getElementById('configSection');
+        if (section) section.classList.toggle('hidden');
+    });
 });
 
 let currentEditId = null;
