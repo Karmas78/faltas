@@ -47,8 +47,8 @@ try {
 // Estado Global
 // --- CONFIGURACIÓN DE ROLES ---
 const ADMIN_EMAILS = [
-    'karmas78@gmail.com', // El usuario actual
-    'admin@sistema.com'    // Otros admins opcionales
+    'sinterminator@gmail.com',
+    'escuela.guardiamrina@gmail.com'
 ];
 
 function isAdmin(email) {
