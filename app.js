@@ -547,6 +547,37 @@ async function submitRecord() {
 
     const btn = document.getElementById('submitRecordBtn');
     const originalText = btn.innerHTML;
+
+    // Obtener valores para validar
+    const nombre = document.getElementById('formNombre').value.trim();
+    const inicioRaw = document.getElementById('formInicio').value;
+    const terminoRaw = document.getElementById('formTermino').value;
+    const dias = parseFloat(document.getElementById('formDias').value);
+
+    // --- VALIDACIONES ---
+    
+    // 1. Validar Nombre
+    if (!nombre) {
+        showFormFeedback('Error: El nombre del funcionario es obligatorio.', true);
+        return;
+    }
+
+    // 2. Validar Rango de Fechas
+    if (inicioRaw && terminoRaw) {
+        const fechaInicio = new Date(inicioRaw + "T12:00:00"); // Noon to avoid TZ issues
+        const fechaTermino = new Date(terminoRaw + "T12:00:00");
+        if (fechaInicio > fechaTermino) {
+            showFormFeedback('Error: La fecha de inicio no puede ser posterior a la fecha de término.', true);
+            return;
+        }
+    }
+
+    // 3. Validar Días/Horas
+    if (isNaN(dias) || dias <= 0) {
+        showFormFeedback('Error: La cantidad de días/horas debe ser un número mayor a cero.', true);
+        return;
+    }
+
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Guardando...';
     btn.disabled = true;
 
