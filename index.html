@@ -314,7 +314,29 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Cargo</label>
-                                <input id="formCargo" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: Docente, Asistente...">
+                                <input id="formCargo" list="cargosList" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: Docente, Asistente...">
+                                <datalist id="cargosList">
+                                    <option value="Director/a">
+                                    <option value="Inspector/a general">
+                                    <option value="Jefe/a U.T.P.">
+                                    <option value="Orientador/a">
+                                    <option value="Evaluador/a">
+                                    <option value="Coordinadora P.I.E.">
+                                    <option value="Coordinadora Convivencia">
+                                    <option value="Docente">
+                                    <option value="Asistente de aula">
+                                    <option value="Inspector de patio">
+                                    <option value="Docente P.I.E.">
+                                    <option value="Kinesiologo/a">
+                                    <option value="Fonoaudiólogo/a">
+                                    <option value="Asistente Social">
+                                    <option value="Coordinador/a C.R.A.">
+                                    <option value="Encargado/a C.R.A.">
+                                    <option value="Secretaria/o">
+                                    <option value="Psicólogo/a">
+                                    <option value="Encargado/a Enlaces">
+                                    <option value="Asistente de Aseo">
+                                </datalist>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
@@ -346,11 +368,26 @@
                         <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Avisa a</label>
-                                <input id="formAvisaA" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: IG, DIR">
+                                <input id="formAvisaA" list="avisaAList" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: IG, DIR">
+                                <datalist id="avisaAList">
+                                    <option value="Jefe D.E.M.">
+                                    <option value="Director/a">
+                                    <option value="Inspector/a General">
+                                    <option value="Jefe/a U.T.P.">
+                                    <option value="Evaluador/a">
+                                    <option value="Orientador/a">
+                                    <option value="Secretaria/o">
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Medio</label>
-                                <input id="formMedio" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: WSP, LLAM">
+                                <input id="formMedio" list="medioList" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-gray-50 focus:bg-white" placeholder="Ej: WSP, LLAM">
+                                <datalist id="medioList">
+                                    <option value="Llamada telefónica">
+                                    <option value="E-mail">
+                                    <option value="WhatsApp">
+                                    <option value="En persona">
+                                </datalist>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">Reemplazo</label>
