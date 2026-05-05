@@ -1105,9 +1105,9 @@ function generateSummary() {
 
     // 2. Generar Cabecera Dinámica
     summaryHead.innerHTML = `
-        <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wider">Funcionario</th>
-        <th class="px-4 py-3 text-center text-[10px] font-bold text-amber-700 uppercase tracking-wider bg-amber-50">Total Días</th>
-        ${tiposArray.map(t => `<th class="px-4 py-3 text-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">${t}</th>`).join('')}
+        <th class="sticky top-0 z-20 bg-slate-100 dark:bg-slate-700 px-4 py-3 text-left text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider shadow-sm">Funcionario</th>
+        <th class="sticky top-0 z-20 bg-amber-50 dark:bg-amber-900/40 px-4 py-3 text-center text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider shadow-sm">Total Días</th>
+        ${tiposArray.map(t => `<th class="sticky top-0 z-20 bg-slate-100 dark:bg-slate-700 px-4 py-3 text-center text-[10px] font-bold text-slate-500 dark:text-slate-300 uppercase tracking-wider shadow-sm">${t}</th>`).join('')}
     `;
 
     // 3. Agrupar datos por funcionario
